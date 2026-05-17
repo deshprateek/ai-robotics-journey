@@ -115,7 +115,7 @@ Month 9:    Job search
 
 **Habits this month:**
 - [ ] Show up every day
-- [ ] Set up Weights & Biases account — log every experiment from here onwards, no exceptions
+- [ ] Set up Weights & Biases account at wandb.ai — you will log every experiment from here onwards
 - [ ] Follow on Twitter/X: Andrej Karpathy, Sergey Levine, Chelsea Finn, Pieter Abbeel
 - [ ] Join Discord: Hugging Face, LeRobot, Papers with Code
 
@@ -152,6 +152,7 @@ Month 9:    Job search
   - Why: this is the "hello world" of RL. Every robotics researcher has done this. It teaches the core RL loop — observe state, pick action, get reward, update policy
   - Implement from scratch: no Stable-Baselines3 here — write the Q-table or DQN yourself so you understand what's happening
   - Goal: agent keeps the pole balanced for 200+ timesteps consistently
+  - Log in W&B: reward per episode, steps balanced over time — your first W&B experiment, get the logging habit right here
   - Success: you can explain what a reward function is and why choosing it carefully matters
 
 - [ ] **Project 2: Home thermostat RL simulation**
@@ -159,6 +160,7 @@ Month 9:    Job search
   - Why: this is your first HomePersona RL experiment — the reward function design is the same problem you will face with the preference layer. The RL loop here (state → action → reward → update) is exactly what DPO replaces in Month 6-7
   - Connect to benchmark: use the climate commands from Benchmark v0.1 (thermostat category) as the action space. Your agent's learned policy is the ground truth you will compare HomePersona against in Month 6-7 experiments
   - Goal: agent learns to pre-heat the house before occupants arrive and turn off when nobody's home
+  - Log in W&B: reward per episode, energy cost vs naive policy, temperature compliance rate over time
   - Success: your agent uses less energy than a naive "always heat when cold" policy while maintaining comfort
 
 ---
@@ -166,8 +168,6 @@ Month 9:    Job search
 ## Month 3 — Research Landscape
 
 **Habits this month:**
-- [ ] Show up every day
-- [ ] Log all experiment results in W&B with a note on what you were testing
 - [ ] Read 2 papers/week — use arxiv-sanity and Papers with Code to find them
 - [ ] Every Sunday: check new arXiv papers in personalisation, continual learning, on-device ML
 
@@ -225,6 +225,7 @@ Month 9:    Job search
   - Task: run 50 commands from your Benchmark v0.1 (spread across lighting, climate, access categories) through the untuned Llama 3.2 3B. Record which commands it gets right — this is your Day 0 baseline before any personalisation
   - How: `pip install homeassistant`, configure 3 virtual devices in `configuration.yaml`, write a Python script that sends model responses as Home Assistant API calls
   - Goal: working pipeline where a text command reaches a device action, even if accuracy is low
+  - Log in W&B: Day 0 accuracy per category (lighting, climate, access) on Benchmark v0.1 — this number appears in your paper as the untuned baseline
   - Success: you have a reproducible Day 0 number on Benchmark v0.1 — everything in Month 6-7 will be compared against this
 
 - [ ] **Project 2: ChromaDB memory store**
@@ -232,6 +233,7 @@ Month 9:    Job search
   - Task: store 100 fake user interaction logs (e.g. "User asked to dim bedroom lights at 10pm, set to 30%"). Write a retrieve(query) function. Test it on 20 queries with known correct retrievals and measure precision@3
   - How: `pip install chromadb sentence-transformers`, embed with `all-MiniLM-L6-v2`, store and query
   - Goal: retrieval precision above 80% on your 20 test queries
+  - Log in W&B: retrieval precision@3 and precision@5, embedding model used, average query latency
   - Success: you understand why embedding choice matters — this memory store will power the RAG cold-start phase of HomePersona
 
 ---
@@ -239,10 +241,7 @@ Month 9:    Job search
 ## Month 4 — Go Deep on Your Niche
 
 **Habits this month:**
-- [ ] Log all results in W&B
 - [ ] Read 2 papers/week
-- [ ] Write first blog post: "I am building a personalised home AI that runs locally — here is why" — post to Towards Data Science or your own blog
-- [ ] Email 1 researcher whose work is closest to yours — 3 sentences: what you work on, why it connects to their work, ask for 20 min call
 
 ### Your Research Project: HomePersona
 
@@ -316,7 +315,9 @@ After 4 weeks of learning your preferences, introduce new conflicting preference
 - [ ] Connect all three components built so far: ChromaDB memory store (Week 11-12) + local LLM + Home Assistant API (Week 11-12)
 - [ ] Build the full query pipeline: user command → retrieve memories from ChromaDB → inject into LLM context → model responds → execute Home Assistant action
 - [ ] Run all 50 Benchmark v0.1 commands through this pipeline — compare against your Week 11-12 Day 0 baseline. Did adding memory retrieval improve things?
-- [ ] Log all results in W&B — this is Experiment 3 from Month 6-7 Phase A (small model + memory, no LoRA)
+- [ ] Log in W&B: accuracy vs Day 0 baseline, response latency, retrieval precision — this is Experiment 3 from Month 6-7 Phase A
+- [ ] Write first blog post now that you have a working end-to-end pipeline: "I am building a personalised home AI that runs locally — here is how it works." Post to Towards Data Science or your own blog
+- [ ] Email 1 researcher in the personal AI / home automation space — share the blog post. 3 sentences: what you built, why it matters, ask one specific question about their work
 
 - [ ] **Project: Retrieval tuning**
   - What: your Week 11-12 ChromaDB had 100 fake logs. Scale to 500 logs and tune retrieval — experiment with embedding models, top-k values, and similarity thresholds
@@ -329,10 +330,7 @@ After 4 weeks of learning your preferences, introduce new conflicting preference
 ## Month 5 — Reproduce MemGPT + Add Your First Layer
 
 **Habits this month:**
-- [ ] Log every experiment in W&B with hypothesis: "I think X will improve Y because Z"
 - [ ] Read 2 papers/week
-- [ ] Write second blog post: "What I learned from reproducing MemGPT and adapting it to home automation"
-- [ ] Email the Letta team — you reproduced their paper, this is your strongest opener. Ask one specific technical question about their memory architecture
 
 **Why MemGPT / Letta:**
 MemGPT is the closest prior work to your research. It gives LLMs a memory architecture modelled on operating systems — a limited main context (like RAM) and an external memory store (like a hard drive) that it reads and writes to. Reproducing it means you deeply understand the memory architecture you are building on top of, and your extension (LoRA personalisation + home automation) is a natural next step the authors themselves have not explored.
@@ -352,7 +350,9 @@ MemGPT is the closest prior work to your research. It gives LLMs a memory archit
 - [ ] Replace their generic LLM backend with your locally running Phi-4-mini or Llama 3.2 3B via Ollama/MLX
 - [ ] Add the LoRA adapter layer on top — the memory tells the model what happened, the adapter tells the model who you are
 - [ ] Run your 50-command test suite again — compare against your Month 3 baseline. Did adding LoRA improve things?
-- [ ] Log everything in W&B with notes on every change
+- [ ] Log in W&B: accuracy vs Month 4 baseline, LoRA vs no-LoRA comparison, latency — every change gets its own W&B run with a note on what changed and why
+- [ ] Write second blog post: "What I learned from reproducing MemGPT and adapting it to home automation" — concrete, specific, share what surprised you
+- [ ] Email the Letta team — 3 sentences: reproduced your paper, adapted it to home automation, here is one specific thing I found different. This is your strongest opener — you built their work
 
 **Common failure modes to look for:**
 - [ ] Memory retrieval brings back irrelevant old memories — clutters the context
@@ -366,10 +366,7 @@ MemGPT is the closest prior work to your research. It gives LLMs a memory archit
 ## Month 6-7 — Your Research Contribution
 
 **Habits this month:**
-- [ ] Log every single experiment in W&B — every run, every result, every failure. A result you cannot reproduce is worthless
 - [ ] Read 2 papers/week — focus on papers you will cite in your related work section
-- [ ] Write third blog post: "Early results from HomePersona — does personalisation actually work?"
-- [ ] Email 2 researchers/month — share your early results, ask for feedback. Researchers respond to concrete results, not ideas
 
 ### Weekly Experiment Structure
 ```
@@ -397,6 +394,9 @@ Sunday:    Read papers that explain your results
 - [ ] Experiment 3: Llama 3.2 3B + memory only (no LoRA) — does memory alone close the gap with GPT-4?
 - [ ] Experiment 4: Llama 3.2 3B + LoRA only (no memory) — does the adapter alone help?
 - [ ] Experiment 5: Full system — memory + LoRA — does combining them beat either alone?
+- [ ] Log all 5 experiments in the same W&B project with tags (GPT4-baseline, local-no-personalisation, local-memory-only, local-LoRA-only, local-full-system) — the comparison chart is Figure 1 in your paper
+- [ ] After Phase A is complete: write third blog post "Does personalisation actually work? HomePersona Phase A results" — share the W&B chart publicly
+- [ ] After Phase A is complete: email 2 researchers whose work is closest to yours — share the blog post and W&B report link. Researchers respond to concrete results, not ideas
 
 - [ ] **Project: Build an eval harness for HomePersona**
   - What: before running experiments, build a proper evaluation framework so every experiment produces comparable, trustworthy numbers
@@ -411,19 +411,21 @@ Sunday:    Read papers that explain your results
 - [ ] Run your full system on week 1 data, measure task success rate
 - [ ] Add week 2 data, update LoRA adapter and memory, measure again
 - [ ] Repeat for week 3 and 4
+- [ ] Log in W&B: task success rate per simulated week (weeks 1-4) — this plot is Figure 2 in your paper
 - [ ] Plot: does task success rate go up over time? This is your key result
 
 **Phase C: Catastrophic forgetting (Week 25-26 of Month 7)**
 - [ ] After 4 weeks of learning "User A" preferences, switch to "User B" preferences
 - [ ] Measure: how quickly does the system forget User A? How quickly does it learn User B?
 - [ ] Try Elastic Weight Consolidation to slow forgetting — does it help?
-- [ ] This is your second key result and your contribution to continual learning literature
+- [ ] Log in W&B: forgetting rate (User A accuracy after N User B interactions) — this is your second key result and continual learning contribution
 
 **Phase D: Ablation study (Week 27-28 of Month 7)**
 - [ ] Remove memory layer — how much does performance drop?
 - [ ] Remove LoRA adapter — how much does performance drop?
 - [ ] Reduce LoRA rank (fewer adapter parameters) — where is the minimum that still works?
 - [ ] Test on a new user with completely different preferences — does the system generalise?
+- [ ] Log in W&B: ablation table — all 4 conditions with and without each component
 
 **Failure analysis (ongoing)**
 - [ ] Collect 20 specific examples where your system fails — categorise them
@@ -437,10 +439,7 @@ Sunday:    Read papers that explain your results
 ## Month 8 — Write + Submit
 
 **Habits this month:**
-- [ ] Post preprint on arXiv the same day you submit — put the link on your resume immediately, do not wait for acceptance
-- [ ] Email every researcher you have contacted over the past 4 months — share the paper link
-- [ ] Post on Twitter/X and LinkedIn: one thread explaining what you built and what you found
-- [ ] Update your resume and GitHub README with the arXiv link
+- [ ] Read 2 papers/week
 
 > **Build-heavy alternative:** If the system is working well and the paper feels like it's blocking you from shipping, prioritise in this order: (1) clean GitHub with reproducible code, (2) demo video of HomePersona learning preferences in real time, (3) blog post explaining what you built and why. This gets you into Tier 2-3 companies without a paper. The paper is what opens Tier 1 doors — do it if time allows, not at the cost of the working system.
 
@@ -496,8 +495,11 @@ Conclusion:   what you showed, limitations (synthetic data, one home),
 
 ### Submission Checklist
 - [ ] Week 29-30: Write full paper draft
-- [ ] Week 31: Post preprint on arXiv — put link on resume immediately
+- [ ] Week 31: Post preprint on arXiv — same day as submission, do not wait for acceptance
 - [ ] Week 31: Submit to workshop
+- [ ] Week 31: Update resume and GitHub README with arXiv link immediately
+- [ ] Week 31: Post on Twitter/X and LinkedIn — one thread explaining what you built and what you found
+- [ ] Week 31: Email every researcher you have contacted over the past months — share the paper link directly
 
 ### Workshop Targets
 | Conference | Workshop | Deadline | Why |
@@ -514,10 +516,7 @@ Conclusion:   what you showed, limitations (synthetic data, one home),
 ## Month 9 — Job Search
 
 **Habits this month:**
-- [ ] Email target company researchers directly — do not just apply online, that is the slow path
-- [ ] Template: 3 sentences — what you built, why it is relevant to their work, attach arXiv link, ask for 20 min call
-- [ ] Apply to Tier 3 first (Letta, Josh.ai, Home Assistant) — practice interviews before Tier 1
-- [ ] Write one blog post per week explaining your research in plain English — people will find you
+- [ ] Apply to Tier 3 first (Letta, Josh.ai, Home Assistant) — build interview reps before Tier 1
 
 ### Your Profile by Month 9
 - [ ] GitHub: paper code, clean implementation, reproducible experiments
@@ -580,9 +579,8 @@ Conclusion:   what you showed, limitations (synthetic data, one home),
 
 ### How to Apply (Don't Just Apply Online)
 - [ ] Find researchers at target companies whose work is closest to yours
-- [ ] Email directly: 3 sentences — what you work on, why relevant to them, ask for 20 min call
-- [ ] Attach arXiv paper
-- [ ] Write a blog post explaining your research — cross-post to Towards Data Science
+- [ ] Email directly — do not just apply online, that is the slow path. Template: 3 sentences — what you built, why it is relevant to their work, attach arXiv link, ask for 20 min call
+- [ ] Write a blog post per week explaining your research in plain English — people will find you, cross-post to Towards Data Science
 
 ### Interview Prep
 | Round | What They Test | Your Status |
