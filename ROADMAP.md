@@ -59,6 +59,10 @@ Month 9:    Job search
 
 ## Month 1 — ML Fluency (PyTorch + CNNs)
 
+**Habits this month:**
+- [ ] Show up every day — 30 minutes beats a 10hr weekend binge
+- [ ] Commit to HomePersona as your niche — do not switch topics
+
 ### Week 1-2: Backprop + PyTorch
 - [x] Watch: Karpathy "The spelled-out intro to neural networks and backpropagation" (YouTube)
 - [x] Watch: Karpathy "The spelled-out intro to language modeling" (YouTube)
@@ -109,6 +113,12 @@ Month 9:    Job search
 
 ## Month 2 — Transformers + RL
 
+**Habits this month:**
+- [ ] Show up every day
+- [ ] Set up Weights & Biases account — log every experiment from here onwards, no exceptions
+- [ ] Follow on Twitter/X: Andrej Karpathy, Sergey Levine, Chelsea Finn, Pieter Abbeel
+- [ ] Join Discord: Hugging Face, LeRobot, Papers with Code
+
 ### Week 5-6: Transformers + LoRA
 - [ ] Read: "The Illustrated Transformer" — Jay Alammar blog post (read first)
 - [ ] Read: "Attention is All You Need" — Vaswani et al. 2017 (the original paper)
@@ -154,6 +164,12 @@ Month 9:    Job search
 ---
 
 ## Month 3 — Research Landscape
+
+**Habits this month:**
+- [ ] Show up every day
+- [ ] Log all experiment results in W&B with a note on what you were testing
+- [ ] Read 2 papers/week — use arxiv-sanity and Papers with Code to find them
+- [ ] Every Sunday: check new arXiv papers in personalisation, continual learning, on-device ML
 
 ### Week 9-10: Read the Field (Build-First)
 
@@ -203,7 +219,6 @@ Month 9:    Job search
 ### Week 11-12: HomePersona Infrastructure Setup
 - [ ] Read: "How to Read a Paper" — Keshav (3 page PDF)
 - [ ] Read: "An Opinionated Guide to ML Research" — John Schulman blog post
-- [ ] Set up: Weights & Biases account — use for every experiment from now on
 
 - [ ] **Project 1: Home Assistant + Benchmark baseline**
   - What: Home Assistant is an open-source smart home platform that runs locally and connects to real or virtual devices. Set it up locally and connect 3 virtual devices: a dimmable light, a thermostat, and a smart lock
@@ -222,6 +237,12 @@ Month 9:    Job search
 ---
 
 ## Month 4 — Go Deep on Your Niche
+
+**Habits this month:**
+- [ ] Log all results in W&B
+- [ ] Read 2 papers/week
+- [ ] Write first blog post: "I am building a personalised home AI that runs locally — here is why" — post to Towards Data Science or your own blog
+- [ ] Email 1 researcher whose work is closest to yours — 3 sentences: what you work on, why it connects to their work, ask for 20 min call
 
 ### Your Research Project: HomePersona
 
@@ -307,6 +328,12 @@ After 4 weeks of learning your preferences, introduce new conflicting preference
 
 ## Month 5 — Reproduce MemGPT + Add Your First Layer
 
+**Habits this month:**
+- [ ] Log every experiment in W&B with hypothesis: "I think X will improve Y because Z"
+- [ ] Read 2 papers/week
+- [ ] Write second blog post: "What I learned from reproducing MemGPT and adapting it to home automation"
+- [ ] Email the Letta team — you reproduced their paper, this is your strongest opener. Ask one specific technical question about their memory architecture
+
 **Why MemGPT / Letta:**
 MemGPT is the closest prior work to your research. It gives LLMs a memory architecture modelled on operating systems — a limited main context (like RAM) and an external memory store (like a hard drive) that it reads and writes to. Reproducing it means you deeply understand the memory architecture you are building on top of, and your extension (LoRA personalisation + home automation) is a natural next step the authors themselves have not explored.
 
@@ -337,6 +364,12 @@ MemGPT is the closest prior work to your research. It gives LLMs a memory archit
 ---
 
 ## Month 6-7 — Your Research Contribution
+
+**Habits this month:**
+- [ ] Log every single experiment in W&B — every run, every result, every failure. A result you cannot reproduce is worthless
+- [ ] Read 2 papers/week — focus on papers you will cite in your related work section
+- [ ] Write third blog post: "Early results from HomePersona — does personalisation actually work?"
+- [ ] Email 2 researchers/month — share your early results, ask for feedback. Researchers respond to concrete results, not ideas
 
 ### Weekly Experiment Structure
 ```
@@ -402,6 +435,12 @@ Sunday:    Read papers that explain your results
 ---
 
 ## Month 8 — Write + Submit
+
+**Habits this month:**
+- [ ] Post preprint on arXiv the same day you submit — put the link on your resume immediately, do not wait for acceptance
+- [ ] Email every researcher you have contacted over the past 4 months — share the paper link
+- [ ] Post on Twitter/X and LinkedIn: one thread explaining what you built and what you found
+- [ ] Update your resume and GitHub README with the arXiv link
 
 > **Build-heavy alternative:** If the system is working well and the paper feels like it's blocking you from shipping, prioritise in this order: (1) clean GitHub with reproducible code, (2) demo video of HomePersona learning preferences in real time, (3) blog post explaining what you built and why. This gets you into Tier 2-3 companies without a paper. The paper is what opens Tier 1 doors — do it if time allows, not at the cost of the working system.
 
@@ -473,6 +512,12 @@ Conclusion:   what you showed, limitations (synthetic data, one home),
 ---
 
 ## Month 9 — Job Search
+
+**Habits this month:**
+- [ ] Email target company researchers directly — do not just apply online, that is the slow path
+- [ ] Template: 3 sentences — what you built, why it is relevant to their work, attach arXiv link, ask for 20 min call
+- [ ] Apply to Tier 3 first (Letta, Josh.ai, Home Assistant) — practice interviews before Tier 1
+- [ ] Write one blog post per week explaining your research in plain English — people will find you
 
 ### Your Profile by Month 9
 - [ ] GitHub: paper code, clean implementation, reproducible experiments
@@ -616,7 +661,7 @@ One sentence answer for interviews: "At small scale I use plot_top_losses and ma
 | mem0 | Managed memory layer for AI agents — evaluate as alternative to rolling your own ChromaDB pipeline | Month 3 |
 | Home Assistant | Open source home automation platform, real device control | Month 3 |
 | Letta / MemGPT | Memory architecture you will reproduce and extend | Month 4 |
-| AI2-THOR | Home simulation for testing without real hardware | Month 2 |
+| Home Assistant | Open source home automation — real device control and virtual device testing | Month 3 |
 | Overleaf | Paper writing in LaTeX | Month 7 |
 | Modal / Lambda Labs | Cheap GPU compute for larger fine-tuning runs | Month 5 |
 | Connected Papers | Literature mapping — paste any paper, find related work | Month 2 |
