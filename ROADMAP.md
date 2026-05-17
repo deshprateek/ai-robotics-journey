@@ -141,6 +141,8 @@ Month 9:    Job search
   - Goal: LoRA model matches GPT-4 accuracy on home commands at 100x lower cost and runs fully locally
   - **This dataset is also HomePersona Benchmark v0.1** — the same ~900 examples serve as the evaluation benchmark for all future HomePersona experiments. No public benchmark exists for personal home automation preference learning — creating this is a research contribution in its own right. See `projects/homepersona/DESIGN.md` for full schema and 4-tier structure
   - Success: (1) LoRA classifier works; (2) benchmark is versioned, documented, and reusable for all Month 5-6 experiments
+  - Write first blog post when this project is complete: "I fine-tuned a 3B model on home automation commands and matched GPT-4 at 100x lower cost — and built the first benchmark to prove it." Post to Towards Data Science or your own blog
+  - Email 1 researcher in the personalisation / small models space — share the blog post and the benchmark. This establishes your niche publicly from Month 2
 
 ### Week 7-8: RL Basics
 - [ ] Read: Sutton & Barto "Reinforcement Learning" Ch 1-3 (free PDF)
@@ -316,7 +318,7 @@ After 4 weeks of learning your preferences, introduce new conflicting preference
 - [ ] Build the full query pipeline: user command → retrieve memories from ChromaDB → inject into LLM context → model responds → execute Home Assistant action
 - [ ] Run all 50 Benchmark v0.1 commands through this pipeline — compare against your Week 11-12 Day 0 baseline. Did adding memory retrieval improve things?
 - [ ] Log in W&B: accuracy vs Day 0 baseline, response latency, retrieval precision — this is Experiment 3 from Month 6-7 Phase A
-- [ ] Write first blog post now that you have a working end-to-end pipeline: "I am building a personalised home AI that runs locally — here is how it works." Post to Towards Data Science or your own blog
+- [ ] Write second blog post now that you have a working end-to-end pipeline: "HomePersona has a working pipeline — here is how the pieces connect." Post to Towards Data Science or your own blog
 - [ ] Email 1 researcher in the personal AI / home automation space — share the blog post. 3 sentences: what you built, why it matters, ask one specific question about their work
 
 - [ ] **Project: Retrieval tuning**
@@ -351,7 +353,7 @@ MemGPT is the closest prior work to your research. It gives LLMs a memory archit
 - [ ] Add the LoRA adapter layer on top — the memory tells the model what happened, the adapter tells the model who you are
 - [ ] Run your 50-command test suite again — compare against your Month 3 baseline. Did adding LoRA improve things?
 - [ ] Log in W&B: accuracy vs Month 4 baseline, LoRA vs no-LoRA comparison, latency — every change gets its own W&B run with a note on what changed and why
-- [ ] Write second blog post: "What I learned from reproducing MemGPT and adapting it to home automation" — concrete, specific, share what surprised you
+- [ ] Write third blog post: "What I learned from reproducing MemGPT and adapting it to home automation" — concrete, specific, share what surprised you
 - [ ] Email the Letta team — 3 sentences: reproduced your paper, adapted it to home automation, here is one specific thing I found different. This is your strongest opener — you built their work
 
 **Common failure modes to look for:**
@@ -395,7 +397,7 @@ Sunday:    Read papers that explain your results
 - [ ] Experiment 4: Llama 3.2 3B + LoRA only (no memory) — does the adapter alone help?
 - [ ] Experiment 5: Full system — memory + LoRA — does combining them beat either alone?
 - [ ] Log all 5 experiments in the same W&B project with tags (GPT4-baseline, local-no-personalisation, local-memory-only, local-LoRA-only, local-full-system) — the comparison chart is Figure 1 in your paper
-- [ ] After Phase A is complete: write third blog post "Does personalisation actually work? HomePersona Phase A results" — share the W&B chart publicly
+- [ ] After Phase A is complete: write fourth blog post "Does personalisation actually work? HomePersona Phase A results" — share the W&B chart publicly
 - [ ] After Phase A is complete: email 2 researchers whose work is closest to yours — share the blog post and W&B report link. Researchers respond to concrete results, not ideas
 
 - [ ] **Project: Build an eval harness for HomePersona**
