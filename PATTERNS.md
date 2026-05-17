@@ -858,6 +858,35 @@ batch_tfms=aug_transforms(max_warp=0)  # disables perspective warp, all other au
 
 ---
 
+### Pattern 24 — Mini-Batches: Why Not Full Dataset or Single Item
+**Source:** fast.ai Chapter 4 — MNIST digit classifier
+**The problem at that moment:** understanding why SGD uses mini-batches instead of the full dataset or one image at a time
+**What was observed:** full dataset = 1 weight update per epoch; single item = noisy unstable gradient; mini-batch = best of both
+**The pattern:**
+- Full dataset per update: accurate gradient but only 1 update per epoch — model learns slowly
+- Single item per update: many updates but gradient is noisy and unstable — learning is erratic
+- Mini-batch (64 images): ~187 updates per epoch on MNIST, gradient stable enough to be meaningful
+- More frequent updates = model already significantly corrected before epoch 1 even ends
+- Noise from different random batches acts as a regulariser — forces weights to work across many subsets, not just memorise the full training set
+- Mini-batches slow down overfitting but do not prevent it — you can still overfit with mini-batches over many epochs (seen in spill classifier at epoch 26)
+**Key insight:** mini-batches give you more weight updates per epoch for the same compute cost, and the randomness accidentally improves generalisation. Start with batch size 64 for image tasks.
+
+---
+
+### Pattern 25 — Batch Size and Learning Rate Move Together
+**Source:** fast.ai Chapter 4 — MNIST digit classifier
+**The problem at that moment:** understanding what batch size to choose and whether it matters beyond speed
+**What was observed:** batch size and learning rate are not independent — changing one without the other changes how the model learns
+**The pattern:**
+- Smaller batch (16-32): noisier gradient → better generalisation, more Python overhead per epoch
+- Larger batch (128-512): smoother gradient → faster wall-clock time, but tends to overfit more
+- Empirical rule: if you double the batch size, halve the learning rate to get similar generalisation
+- Changing batch size between experiment runs makes results incomparable — keep it fixed per project
+- Default starting point: batch size 64, tune learning rate first before touching batch size
+**Key insight:** batch size and learning rate are a pair — the generalisation behaviour of a model depends on their ratio, not on either value alone.
+
+---
+
 ## Index — Find Pattern by Problem
 
 | I need to... | Pattern |
@@ -903,3 +932,5 @@ batch_tfms=aug_transforms(max_warp=0)  # disables perspective warp, all other au
 | Fix zero batches error with small datasets in fast.ai | Pattern 21 — DataLoader bs |
 | Fix MPS error with aug_transforms on Mac | Pattern 22 — aug_transforms MPS |
 | Fix missing class error with small datasets and random split | Pattern 23 — Random Split Class Drop |
+| Understand why mini-batches are better than full dataset or single item | Pattern 24 — Mini-Batches |
+| Know what batch size to use and how it interacts with learning rate | Pattern 25 — Batch Size and Learning Rate |
