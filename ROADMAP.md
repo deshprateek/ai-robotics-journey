@@ -98,14 +98,15 @@ Sun (3hr): Read 2-3 papers + plan the coming week
   - Goal: model generates coherent text after training — even if it's nonsense, the structure should look right
   - Success: you can explain what "attention" means in one sentence without hand-waving
 
-- [ ] **Project 2: Smart home command classifier with LoRA**
-  - What: create a dataset of ~700 home automation commands across 7 categories: lighting, climate, access, media, appliances, cameras, routines. Fine-tune Llama 3.2 3B using LoRA — a technique that adds a tiny set of trainable parameters (adapters) on top of a frozen base model, making personalised fine-tuning cheap enough to run on your laptop
+- [ ] **Project 2: Smart home command classifier with LoRA + HomePersona Benchmark v0.1**
+  - What: create a dataset of ~900 home automation commands across 7 categories (lighting, climate, access, media, appliances, cameras, routines) and 4 tiers (unambiguous → personal). Fine-tune Llama 3.2 3B using LoRA — a technique that adds a tiny set of trainable parameters (adapters) on top of a frozen base model, making personalised fine-tuning cheap enough to run on your laptop
   - Why LoRA specifically: full fine-tuning of a 3B parameter model requires expensive GPUs. LoRA adds only ~1M trainable parameters on top — it can run on a MacBook. This is the core mechanism behind your entire research direction. Understanding it now means every subsequent project builds on solid ground
-  - Example inputs: "dim the bedroom lights" → lighting, "lock the front door" → security, "play jazz in the kitchen" → entertainment
+  - Example inputs: "dim the bedroom lights" → lighting, "lock the front door" → access, "play jazz in the kitchen" → media
   - How: use `peft` library from Hugging Face (`pip install peft`), load Llama 3.2 3B via Ollama, apply LoRA config, fine-tune
   - Compare: LoRA fine-tuned small model vs GPT-4 API on the same commands — measure accuracy and latency
   - Goal: LoRA model matches GPT-4 accuracy on home commands at 100x lower cost and runs fully locally
-  - Success: you feel the power of LoRA — a 3B model that knows nothing about home automation becomes an expert after 30 minutes of fine-tuning on your laptop. This is the seed of your research paper
+  - **This dataset is also HomePersona Benchmark v0.1** — the same ~900 examples serve as the evaluation benchmark for all future HomePersona experiments. No public benchmark exists for personal home automation preference learning — creating this is a research contribution in its own right. See `projects/homepersona/DESIGN.md` for full schema and 4-tier structure
+  - Success: (1) LoRA classifier works; (2) benchmark is versioned, documented, and reusable for all Month 5-6 experiments
 
 ### Week 7-8: RL Basics
 - [ ] Read: Sutton & Barto "Reinforcement Learning" Ch 1-3 (free PDF)
@@ -244,6 +245,12 @@ After 4 weeks of learning your preferences, introduce new conflicting preference
 - [ ] Draw a full system diagram of HomePersona — base model, adapter, memory, Home Assistant API
 - [ ] Write down: what are the 3 things your system does that MemGPT does not?
 - [ ] Set up Home Assistant locally — connect at least 3 virtual devices (light, thermostat, lock)
+- [ ] **Extend Benchmark v0.1 → v0.2 with context**
+  - What: take the ~900 commands from Week 5-6 and add context columns — same command, different context, different correct action. This is the context discrimination layer the LoRA classifier didn't need but HomePersona does
+  - Why: the benchmark's primary metric is not action accuracy (mostly solved) but context discrimination accuracy — does the model pick the right action when the same command appears in different contexts?
+  - Example: "make it comfortable" + {22:00, post-gym, home alone} → 19°C dim lights vs {19:00, guests over} → 21°C bright lights
+  - Goal: 50+ context-varying examples covering all 4 tiers, versioned as v0.2 in `projects/homepersona/benchmark/`
+  - Success: you can run any HomePersona experiment and report both action accuracy and context discrimination accuracy as separate metrics
 
 ### Week 15-16: Build the Baseline
 - [ ] Run Phi-4-mini or Llama 3.2 3B locally via Ollama or MLX — confirm it can handle home automation commands
