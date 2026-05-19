@@ -217,6 +217,7 @@ Month 9:    Job search
 - [ ] CLIP — OpenAI 2021. Vision-language pretraining. You will use CLIP as a perception backbone
 - [ ] Inner Monologue — Google 2022. LLMs reason about robot actions in real time
 - [ ] ALFRED benchmark — MIT 2020. Standard home task benchmark — you need to know what everyone else evaluates on
+- [ ] PersonalHomeBench — arXiv 2604.16813, April 2026. Closest prior work to HomePersona benchmark. 1,100 households, 9,168 tasks, 40+ appliances. Tests static reasoning about a described user — NOT weight adaptation. Read to understand exactly how your benchmark differs
 - [ ] ACT (Action Chunking with Transformers) — Zhao et al. 2023. Imitation learning architecture for physical robots. Expected knowledge at Figure AI, Physical Intelligence, and Agility Robotics interviews
 
 ### Week 11-12: HomePersona Infrastructure Setup
@@ -276,11 +277,11 @@ Layer 4 — Preference layer: Learns from corrections and confirmations
 ```
 
 **Why this is novel:**
-- No paper has studied this combination (LoRA adapters + local memory + preference learning + home automation) as a unified system
-- The personalisation angle is under-explored — most work focuses on making models more capable, not more personal
+- PersonalHomeBench (April 2026) tests if a model can *reason about* a described user — HomePersona tests if a model's weights *adapt* from experience. Different problem, complementary contribution
+- No paper has defined Alignment Velocity — how many interaction cycles to learn a specific user behaviour without explicit programming
+- No benchmark measures the three-axis combination: adaptation speed + catastrophic forgetting + edge hardware efficiency
 - Running entirely on home hardware with no cloud dependency is a real constraint nobody is optimising for
 - The confirmation loop creates a data flywheel — the system collects its own labeled training data through use
-- You have two clean measurable claims: does task success rate improve over time, and does confirmation rate drop over time?
 
 **What you need — zero capital:**
 - Your laptop or a Mac Mini (the base model runs on CPU)
@@ -457,24 +458,29 @@ Sunday:    Read papers that explain your results
 Write this story — every section should serve it:
 
 ```
-Problem:    Home AI today is generic and stateless. Alexa treats everyone 
-            identically and forgets everything between sessions. This is 
-            not how useful assistants work.
+Problem:    Home AI today is generic and stateless. Recent benchmarks 
+            (PersonalHomeBench, 2026) test whether models can reason about 
+            a described user — but no system actually adapts its weights 
+            from experience. Reasoning about you is not the same as 
+            learning to be you.
 
-Insight:    Home environments are constrained enough that a small 
-            personalised model should outperform a large generic one.
-            You do not need world knowledge — you need to know this user
-            in this home.
+Insight:    Home environments are constrained enough that a small local 
+            model whose weights continuously adapt from interactions should 
+            outperform a large generic model on personalised commands.
+            You do not need world knowledge — you need to know this user.
 
-Method:     HomePersona — a three-layer system: a small base model 
-            (Llama 3.2 3B) running locally, a LoRA adapter that updates 
-            continuously from user interactions, and a local memory store 
-            for episodic preferences. Runs entirely on home hardware.
-            No cloud. No privacy risk.
+Method:     HomePersona — a local LoRA adapter that updates continuously 
+            from user interactions, backed by a semantic memory store.
+            Evaluated on three axes: Alignment Velocity (how fast it 
+            learns you), Memory Retentiveness (catastrophic forgetting), 
+            and Inference Efficiency (accuracy per ms per MB on edge hardware).
+            Runs entirely on home hardware. No cloud. No privacy risk.
 
-Result:     After 4 weeks of interaction, HomePersona achieves X% higher 
-            task success rate than GPT-4 on personalised commands, with 
-            100x lower latency and zero data leaving the home.
+Result:     HomePersona reaches X% task success on personalised commands 
+            after N interaction cycles, retains Y% of prior habits when 
+            learning new ones, and runs at Z ms on a Mac Mini — 
+            outperforming prompted GPT-4 on user-specific commands 
+            while running entirely locally.
 ```
 
 ### Paper Structure

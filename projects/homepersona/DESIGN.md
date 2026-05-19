@@ -4,6 +4,19 @@
 
 ---
 
+## Prior Work and Positioning
+
+**PersonalHomeBench** (arXiv 2604.16813, April 2026) — the closest existing benchmark. 1,100 households, 9,168 task instances, 40+ smart appliances. Evaluates whether a model can reason about a personalised household context *given in the prompt*. Key gap: static evaluation — no weight updates, no adaptation over time, no catastrophic forgetting measurement, no LoRA or parameter-efficient adaptation.
+
+**SmartBench** (arXiv 2503.06029, March 2026) — Chinese smartphone LLM tasks. No overlap with HomePersona.
+
+**HomePersona's positioning:** PersonalHomeBench tests if a model *understands* your context. HomePersona tests if a model's *weights actually change and improve* from experience. Fundamentally different claims.
+
+> PersonalHomeBench: can the model reason about you given a description?  
+> HomePersona: can the model *become* you through interaction?
+
+---
+
 ## The Core Insight
 
 Home AI fails not because it can't understand commands — it fails because it doesn't know *who you are* and *what context you're in*. The action space is small and well-defined. The context discrimination is the hard problem.
@@ -136,25 +149,38 @@ Phase 3+:  [Context-Conditioned NN] ──────────────�
 
 ---
 
-## The Benchmark (HomePersona v0.1)
+## The Benchmark (HomePersona v0.1 → v0.2)
 
 *Separate from real user data — fully constructable synthetically.*
 
 **Schema:** See `dataset_design.md` in memory — 7 categories, 4 tiers, ~900 examples.
 
-**What the benchmark actually measures:**
-- Not just "does it get the action right"
-- But "does it get the action right *when the same command appears in different contexts*"
+**Novelty claim:** First benchmark for *continual, parameter-efficient personalisation* — measuring how a local model's weights adapt to a specific user over time. PersonalHomeBench measures static reasoning about a described user. We measure dynamic weight adaptation from experience.
+
+### Three Evaluation Axes
+
+**Axis A — Alignment Velocity (Adaptation Curve)**
+How many interaction cycles does it take for the LoRA adapter to learn a user's behavioural context without explicit programming?
+- Example: user overrides thermostat to 19°C every Tuesday at 2pm (post-workout). How many cycles before the model pre-cools at 1:45pm automatically?
+- Metric: number of interactions N to reach 90% correct prediction on that behaviour
+
+**Axis B — Memory Retentiveness (Catastrophic Forgetting Index)**
+When the model learns New Habit B, does it corrupt its accuracy on Old Habit A?
+- Example: after learning summer cooling habits over 4 weeks, shift to winter heating. Does security routine accuracy degrade?
+- Metric: accuracy on Habit A after N updates for Habit B — the forgetting curve
+
+**Axis C — Inference Efficiency (Edge Hardware Index)**
+Task accuracy mapped against hardware latency and memory footprint.
+- Metric: Task Success Rate / (Time to Inference × RAM Footprint)
+- Measured on target hardware: Mac Mini, Raspberry Pi 5
+
+**Sanity check baseline (not the research metric):**
+- Action accuracy — does it get the device action right at all? (mostly solved by the base model)
+- Context discrimination accuracy — same command, different context, different correct action?
 
 | Same command | Context A | Correct action A | Context B | Correct action B |
 |---|---|---|---|---|
 | "Make it comfortable" | 22:00, post-gym, home alone | 19°C, dim lights | 19:00, guests over | 21°C, bright lights |
-
-This is the evaluation surface — context discrimination, not just action accuracy.
-
-**Two separate metrics:**
-1. Action accuracy — sanity check baseline (mostly solved)
-2. Context discrimination accuracy — the actual research metric
 
 ---
 
@@ -162,13 +188,16 @@ This is the evaluation surface — context discrimination, not just action accur
 
 | Claim | Status |
 |---|---|
-| The benchmark itself | Novel — no public benchmark for personal home automation preference learning exists |
+| First benchmark measuring continual weight adaptation (not static reasoning) | Novel — PersonalHomeBench measures prompt-based reasoning, not LoRA weight updates |
+| Alignment Velocity metric — formalising how fast a local model learns a user | Not defined in literature |
 | Phase transition criterion (when to switch RAG → trained NN) | Novel — no formal definition in literature |
 | Personal RLHF with continual reward model update | Partially explored in recommender systems, not in home automation |
 | Context clash as active learning signal | Not formalised in this domain |
-| Empirical demonstration of breakthrough moment | Novel if measured rigorously |
+| Three-axis evaluation framework (velocity + forgetting + efficiency) | Novel combination for home AI |
 
-**What's NOT novel:** RAG cold start, contextual bandits, data flywheel concept, DPO. These are infrastructure, not contributions.
+**What's NOT novel:** RAG cold start, contextual bandits, data flywheel concept, DPO, static home automation benchmarks. These are infrastructure or prior work.
+
+**Key differentiator from PersonalHomeBench:** They freeze model weights and test reasoning. We update weights and test adaptation. Different problem, different evaluation, complementary contributions.
 
 ---
 
