@@ -308,10 +308,13 @@ After 4 weeks of learning your preferences, introduce new conflicting preference
 - [ ] Draw a full system diagram of HomePersona — base model, adapter, memory, Home Assistant API
 - [ ] Write down: what are the 3 things your system does that MemGPT does not?
 - [ ] Set up Home Assistant locally — connect at least 3 virtual devices (light, thermostat, lock)
-- [ ] **Extend Benchmark v0.1 → v0.2 with context**
+- [ ] **Extend Benchmark v0.1 → v0.2 with context + chaos methodology**
   - What: take the ~900 commands from Week 5-6 and add context columns — same command, different context, different correct action. This is the context discrimination layer the LoRA classifier didn't need but HomePersona does
   - Why: the benchmark's primary metric is not action accuracy (mostly solved) but context discrimination accuracy — does the model pick the right action when the same command appears in different contexts?
   - Example: "make it comfortable" + {22:00, post-gym, home alone} → 19°C dim lights vs {19:00, guests over} → 21°C bright lights
+  - Common context labels: simulated interaction logs
+  - Uncommon context labels: apply the Generalised Assistant Expectation Hierarchy (safety > social context > reversibility > comfort floor > energy default > personal preference) as the labelling prior. For ambiguous cases, crowdsource 100+ responses — if consensus >80% use the majority label; if <60% the correct label is "ask the user"
+  - This hierarchy + crowdsourcing methodology is also how Benchmark v0.3 (chaos robustness) will be labelled in Month 6-7
   - Goal: 50+ context-varying examples covering all 4 tiers, versioned as v0.2 in `projects/homepersona/benchmark/`
   - Success: you can run any HomePersona experiment and report both action accuracy and context discrimination accuracy as separate metrics
 
@@ -411,6 +414,14 @@ Sunday:    Read papers that explain your results
   - Goal: given any HomePersona output, the harness produces 3 scores automatically: retrieval precision, response faithfulness, task success rate
   - Success: you can rerun any experiment and get the same numbers — reproducibility is the bar
 
+- [ ] **Project: Build Benchmark v0.3 — Chaos Robustness Test Set**
+  - What: generate a chaos test set by taking v0.2 context-command pairs and systematically perturbing 1–3 context features (unusual time, flipped guest/exercise flags, extreme temperature, rare activity combinations). Label each perturbed scenario using the Generalised Norm hierarchy + crowdsourcing
+  - Why: v0.1 and v0.2 test performance on scenarios the model has seen or can reason about from a description. v0.3 tests the gap neither covers — what does the model do when it encounters a genuinely novel context outside its training distribution? This is Axis D (Graceful Degradation) in your evaluation framework, and it's the gap PersonalHomeBench cannot measure
+  - Perturbation schema: define per-feature chaos distributions (e.g. time_of_day: [2am, 3am, 4am]; guests_present: flip; outside_temp_c: [-5°C, 38°C]) — see `projects/homepersona/DESIGN.md` for full schema
+  - Labelling: if Generalised Norm hierarchy resolves the scenario unambiguously → use that label. If ambiguous → crowdsource; if <60% consensus → correct label is "ask the user"
+  - Goal: 100+ chaos scenarios versioned as v0.3 in `projects/homepersona/benchmark/`, covering each context feature perturbation type
+  - Success: you can measure Axis D — what % of chaos scenarios does the model handle correctly via the generalised fallback before any personalisation?
+
 **Phase B: Personalisation over time (Week 23-24)**
 - [ ] Simulate 4 weeks of user interactions (generate synthetic interaction logs for a fictional user with consistent preferences)
 - [ ] Run your full system on week 1 data, measure task success rate
@@ -425,12 +436,14 @@ Sunday:    Read papers that explain your results
 - [ ] Try Elastic Weight Consolidation to slow forgetting — does it help?
 - [ ] Log in W&B: forgetting rate (User A accuracy after N User B interactions) — this is your second key result and continual learning contribution
 
-**Phase D: Ablation study (Week 27-28 of Month 7)**
+**Phase D: Ablation study + chaos robustness (Week 27-28 of Month 7)**
 - [ ] Remove memory layer — how much does performance drop?
 - [ ] Remove LoRA adapter — how much does performance drop?
 - [ ] Reduce LoRA rank (fewer adapter parameters) — where is the minimum that still works?
 - [ ] Test on a new user with completely different preferences — does the system generalise?
 - [ ] Log in W&B: ablation table — all 4 conditions with and without each component
+- [ ] Run Benchmark v0.3 (chaos test set) against the full system — measure Axis D: what % of chaos scenarios does the model handle correctly via the generalised fallback? Does adding LoRA adaptation improve this over the cold start baseline?
+- [ ] Log in W&B: Axis D score (% correct on chaos scenarios), broken down by perturbation type — which context feature perturbations break the model most?
 
 **Failure analysis (ongoing)**
 - [ ] Collect 20 specific examples where your system fails — categorise them

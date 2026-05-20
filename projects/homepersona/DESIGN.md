@@ -6,7 +6,7 @@
 
 ## Prior Work and Positioning
 
-**PersonalHomeBench** (arXiv 2604.16813, April 2026) — the closest existing benchmark. 1,100 households, 9,168 task instances, 40+ smart appliances. Evaluates whether a model can reason about a personalised household context *given in the prompt*. Key gap: static evaluation — no weight updates, no adaptation over time, no catastrophic forgetting measurement, no LoRA or parameter-efficient adaptation.
+**PersonalHomeBench** (arXiv 2604.16813, April 2026) — the closest existing benchmark. 1,100 households, 9,168 task instances, 40+ smart appliances. Evaluates whether a model can reason about a personalised household context *given in the prompt*. Key gap: static evaluation — no weight updates, no adaptation over time, no catastrophic forgetting measurement, no LoRA or parameter-efficient adaptation. No fallback mechanism for genuinely novel contexts the prompt doesn't describe.
 
 **SmartBench** (arXiv 2503.06029, March 2026) — Chinese smartphone LLM tasks. No overlap with HomePersona.
 
@@ -44,21 +44,85 @@ Home AI fails not because it can't understand commands — it fails because it d
 
 ---
 
-## The Learning Pipeline (Three Phases)
+## The Validation Problem
+
+*How do we get ground truth for uncommon scenarios?*
+
+Real interaction data is biased toward common cases. A user sets the thermostat to 21°C at 7pm most weekdays — the model sees this hundreds of times. But what does the model do at 3am when guests are over during a storm? The user has no learned preference for this. The data flywheel has no label for it.
+
+Without a principled way to label these scenarios, you can generate infinite uncommon inputs and still have no ground truth to validate against. Two mechanisms solve this:
+
+### Mechanism 1 — Generalised Assistant Expectation Hierarchy
+
+Human personal assistants — executive assistants, butlers, concierge services — exhibit consistent behaviour across cultures when faced with situations they have no specific instruction for. This hierarchy defines the **prior over actions before personalisation**:
+
+```
+Priority 1 — Safety
+  Override all preferences: fire, CO₂, intrusion, medical emergency
+  Ground truth: universally defined, no ambiguity
+
+Priority 2 — Social context
+  When guests are present, default to "public mode": conservative settings
+  Ground truth: crowdsourceable (see Mechanism 2)
+
+Priority 3 — Reversibility
+  When uncertain, take the action easiest to undo
+  Ask before acting rather than act and apologise
+
+Priority 4 — Comfort floor
+  Maintain livable conditions even if exact preference is unknown
+  Temperature within [18°C, 26°C]; lights on if someone is present
+
+Priority 5 — Energy default
+  When occupancy is uncertain and preference is unknown: go conservative
+  Turn off or reduce rather than run unnecessarily
+
+Priority 6 — Personal preference
+  Only applied once learned from this user's interaction data
+```
+
+**Formally:**
+```
+P(action | context) = PersonalPreference(context)     if confidence ≥ θ
+                      GeneralisedNorm(context)         otherwise
+```
+
+This hierarchy is derivable from HRI (Human-Robot Interaction) and service design literature. Formalising it as the defined fallback prior for home AI cold start is a research contribution. PersonalHomeBench has no fallback mechanism — their model either has the answer in the prompt or it doesn't.
+
+### Mechanism 2 — Crowdsourced Labels for Uncommon Scenarios
+
+For scenarios where the hierarchy is ambiguous (social norms vary by culture, personal style varies by individual), ground truth is established by crowdsourcing:
+
+> *"It's 3am. You have guests sleeping over. Your home AI has no learned preference for this situation. What should it do with the thermostat?"*
+
+Aggregate 100+ responses → expected behaviour distribution → label for that scenario class.
+
+**Label quality signal:**
+- High consensus (>80% agreement) → clean label
+- Low consensus (<60% agreement) → correct answer is "ask the user" — defer is the right action, and that itself is a testable label
+
+This is how Benchmark v0.2 and v0.3 uncommon scenario rows get their ground truth labels.
+
+---
+
+## The Learning Pipeline (Four Phases)
 
 ### Phase 1 — Cold Start (RAG)
 *No training data yet. Product is live. Data collection begins.*
 
 - At inference: retrieve relevant context from semantic store (RAG-style)
-- Base model reasons over retrieved context to predict action
+- Base model reasons over retrieved context + **Generalised Assistant Expectation Hierarchy** as system prompt to predict action
 - Every interaction generates a labeled tuple:
   ```
   (structured_context, command, predicted_action, confirmed/corrected)
   ```
-- The product is collecting its own training data through use
-- This is the data flywheel
+- The product is collecting its own training data through use — the data flywheel
 
-**Duration:** Until enough labeled tuples exist to train Phase 3 model (threshold TBD — research question)
+**Validation during Phase 1:** Confirmation rate — what percentage of actions does the user confirm without correction? Starts low (cold start is mediocre by design). This number is the baseline the Phase 3 model must beat.
+
+**What happens when something unpredictable occurs in Phase 1:** System has no learned preference for it. Falls back to the Generalised Norm hierarchy. Asks for confirmation before acting. The user's response becomes a labeled tuple — the uncommon scenario is now in the training data for Phase 3.
+
+**Duration:** Until enough labeled tuples exist to train Phase 3 model (threshold TBD — research question).
 
 ### Phase 2 — Data Flywheel Accumulates
 *Ongoing alongside Phase 1.*
@@ -66,7 +130,7 @@ Home AI fails not because it can't understand commands — it fails because it d
 Context is stored as **structured features**, not free text:
 ```python
 {
-    "time_of_day": 22.0,          # hour as float
+    "time_of_day": 22.0,
     "day_of_week": "wednesday",
     "room": "living_room",
     "guests_present": True,
@@ -75,11 +139,17 @@ Context is stored as **structured features**, not free text:
     "minutes_since_exercise": 45,
     "occupants_home": ["user", "partner"],
     "current_activity": "watching_tv",
-    # ... extensible but fixed schema at deployment time
+    # extensible but fixed schema at deployment time
 }
 ```
 
 Labels come from the confirmation loop — speaker asks, user confirms/corrects, that's the label.
+
+**Coverage problem:** The flywheel naturally over-represents common scenarios. If a user's life is routine, the flywheel only covers a thin slice of the context space. The model becomes well-calibrated on common cases and brittle on rare ones.
+
+**Chaos injection in Phase 2 — active learning for the long tail:** The system periodically surfaces underrepresented context combinations via the confirmation loop: *"I notice you've never told me your preference when guests are over late at night. What should I do in that case?"* This is active learning — the system queries the user for labels on regions of context space the flywheel hasn't covered naturally.
+
+**Coverage metric:** Track what fraction of the context feature combination space has at least one labeled example. Flag underrepresented regions for active querying. This metric appears in the paper as a secondary result: how fast does coverage grow with vs without active querying?
 
 ### Phase 3 — Train the Context-Conditioned NN
 *Triggered when data threshold is reached.*
@@ -88,9 +158,18 @@ Labels come from the confirmation loop — speaker asks, user confirms/corrects,
 - Output: action
 - Architecture: tabular context encoder (MLP) + text command encoder → concatenate → action head
 - This model doesn't retrieve — it has *learned* the mapping
-- Accuracy jumps significantly (the "breakthrough moment")
+- Accuracy jump is the "breakthrough moment" — the first time the system meaningfully outperforms the cold start baseline
 
-**Why the jump is real:** RAG is an approximation (find similar past contexts). The trained NN learns the actual decision boundary. It generalises to unseen context combinations RAG can't handle.
+**Training data augmentation — Chaos Context Injection:** The labeled tuples from Phase 1/2 are augmented with synthetically perturbed context examples (see Chaos Context Injection section). This expands coverage beyond what the flywheel naturally collected and forces the model to learn robust decision boundaries rather than memorising common-case co-occurrence patterns.
+
+**Validation set for Phase 3:**
+- Common scenarios: held-out tuples from the user's real interaction data
+- Uncommon scenarios: chaos-generated context combinations labeled via the Generalised Norm hierarchy + crowdsourcing
+- Benchmark v0.3 (chaos robustness test set) is the held-out evaluation
+
+**What happens when something unpredictable occurs in Phase 3:** The model computes a confidence score on the action prediction. If confidence < θ, it falls back to the Generalised Norm hierarchy and asks for confirmation. The user's response becomes a DPO preference pair for Phase 4.
+
+**Why the accuracy jump is real:** RAG is an approximation (find similar past contexts, hope they're close enough). The trained NN learns the actual decision boundary. It generalises to unseen context combinations RAG can't handle — including chaos-generated ones.
 
 ### Phase 4 — Personal RLHF
 *Continuous refinement after Phase 3.*
@@ -99,7 +178,10 @@ Labels come from the confirmation loop — speaker asks, user confirms/corrects,
 - Ongoing confirmations/corrections = preference pairs
 - DPO (Direct Preference Optimization) updates the model from these pairs
 - No RL required — DPO is simpler and works on small datasets
-- Reward model = this user's confirmation/correction signals
+
+**Chaos scenarios as DPO signal:** When the model encounters an uncommon scenario (chaos-level context), handles it using the generalised prior, and the user confirms or overrides — that's a preference pair. Over time the model personalises even its long-tail behaviour, shifting from generalised norm toward this specific user's preferences for unusual situations.
+
+**Reward model = this user's confirmation/correction signals.** The Generalised Norm is the initial reward signal for uncommon scenarios; personal preference overwrites it as data accumulates.
 
 ---
 
@@ -120,6 +202,44 @@ Not RAG over documents — RAG over *personal context events*:
 
 ---
 
+## Chaos Context Injection
+
+*Systematically generating the long tail.*
+
+Real interaction data is strongly biased toward common scenarios. A user's home AI sees "weekday evening, home alone, watching TV" hundreds of times. It sees "3am, guests present, post-exercise, storm outside" never. Without deliberate intervention, the model will be well-calibrated on common cases and fail silently on rare ones.
+
+Chaos Context Injection borrows the principle from chaos engineering — deliberately introduce failures during training so the system is robust to them in production — and applies it to context feature perturbation.
+
+### Perturbation Schema
+
+For each context feature, define a perturbation distribution:
+
+```python
+chaos_perturbations = {
+    "time_of_day":              [2.0, 3.0, 4.0, 14.0],        # unusual hours
+    "guests_present":           [True],                         # flip to uncommon
+    "exercise_today":           [True],                         # flip to uncommon
+    "outside_temp_c":           [-5.0, 38.0],                  # extreme values
+    "minutes_since_exercise":   [10, 180],                     # right after / long after
+    "current_activity":         ["sleeping", "hosting_party", "unwell"],
+    "occupants_home":           [[], ["user", "partner", "guests"]],
+}
+```
+
+**Generation process:**
+1. Take a real labeled tuple from the flywheel: `(context, command, action)`
+2. Perturb 1–3 context features according to the schema
+3. Assign label: use Generalised Norm hierarchy if unambiguous; crowdsource if ambiguous
+4. Add to training set as an augmented example
+
+**What this forces the model to learn:** Which context features are causally relevant to each action, not just correlated with it. If perturbing `time_of_day` changes the correct action, time matters for this command. If it doesn't change, time is irrelevant. The model learns to attend to the right features.
+
+**Connection to open research question on context schema completeness:** If a perturbation combination consistently produces a scenario the Generalised Norm cannot resolve confidently (low consensus in crowdsourcing, high model uncertainty), that signals a missing context variable. The schema is incomplete. Chaos injection surfaces these gaps systematically rather than waiting for them to appear in real data.
+
+**This is also how Benchmark v0.3 inputs are generated.** The perturbation schema is applied to the v0.2 base to produce the chaos robustness test set, with labels from the hierarchy + crowdsourcing.
+
+---
+
 ## Architecture Diagram
 
 ```
@@ -129,58 +249,87 @@ User command
 [Context Capture] ──── structured features (time, room, guests, temp, activity...)
      │
      ▼
-Phase 1/2: [Semantic Context Store] ──── retrieve similar past contexts ──► [Base LLM] ──► action
-                                                                                  ▲
-Phase 3+:  [Context-Conditioned NN] ─────────────────────────────────────────────┘
-                (tabular encoder + command encoder → action head)
-                                    │
-                                    ▼
-                          [Confirmation Loop]
-                    Speaker asks → user confirms/corrects
-                                    │
-                                    ▼
-                          Labeled tuple stored
-                                    │
-                          ┌─────────┴──────────┐
-                     Phase 2:              Phase 4:
-                  Add to training       DPO update to
-                     dataset            trained model
+Phase 1/2: [Semantic Context Store] ──── retrieve similar past contexts
+                     │
+                     ▼
+          [Base LLM + Generalised Norm Prior] ──► action
+                     ▲
+Phase 3+:  [Context-Conditioned NN] ──────────────┘
+           (trained on real data + chaos-augmented data)
+                     │
+                     ▼
+           [Confirmation Loop]
+     Speaker asks → user confirms/corrects
+                     │
+                     ▼
+           Labeled tuple stored
+                     │
+           ┌─────────┴──────────┐
+      Phase 2:              Phase 4:
+   Add to training       DPO update to
+      dataset            trained model
+           │
+   [Chaos Injection]
+  Perturb context features
+  Label via Generalised Norm
+  Augment training + eval data
 ```
 
 ---
 
-## The Benchmark (HomePersona v0.1 → v0.2)
+## The Benchmark (HomePersona v0.1 → v0.2 → v0.3)
 
 *Separate from real user data — fully constructable synthetically.*
 
-**Schema:** See `dataset_design.md` in memory — 7 categories, 4 tiers, ~900 examples.
+### v0.1 — Command Classification (Week 5-6)
+- ~900 commands, 7 categories (lighting, climate, access, media, appliances, cameras, routines), 4 tiers (unambiguous → personal)
+- No context columns yet
+- Labels: correct category (clear, unambiguous)
+- Purpose: establish LoRA classifier baseline; demonstrate local model matches GPT-4 on home commands at 100x lower cost
 
-**Novelty claim:** First benchmark for *continual, parameter-efficient personalisation* — measuring how a local model's weights adapt to a specific user over time. PersonalHomeBench measures static reasoning about a described user. We measure dynamic weight adaptation from experience.
+### v0.2 — Context Discrimination (Month 4, Week 13-14)
+- Same ~900 commands + structured context columns added
+- 50+ context-varying pairs: same command, different context, different correct action
+- Common context labels: from simulated user interaction logs
+- Uncommon context labels: Generalised Norm hierarchy + crowdsourcing (Mechanism 1 + 2)
+- Tests: does the model pick the right action when the same command appears in different contexts?
 
-### Three Evaluation Axes
+### v0.3 — Chaos Robustness (Month 6-7, Phase A)
+- Chaos-generated context combinations: perturbed from v0.2 base using the perturbation schema
+- Labels: Generalised Norm hierarchy + crowdsourced for ambiguous cases
+- Tests: when the model encounters a context outside its training distribution, does it fall back gracefully to the generalised prior?
+- This is the evaluation set for Axis D
+
+**Novelty claim:** First benchmark for *continual, parameter-efficient personalisation* — measuring how a local model's weights adapt from experience. PersonalHomeBench measures static reasoning about a described user with no fallback for novel contexts. v0.2 tests context discrimination. v0.3 specifically tests the gap PersonalHomeBench cannot cover.
+
+### Four Evaluation Axes
 
 **Axis A — Alignment Velocity (Adaptation Curve)**
-How many interaction cycles does it take for the LoRA adapter to learn a user's behavioural context without explicit programming?
+How many interaction cycles does it take for the LoRA adapter to learn a specific user behaviour?
 - Example: user overrides thermostat to 19°C every Tuesday at 2pm (post-workout). How many cycles before the model pre-cools at 1:45pm automatically?
-- Metric: number of interactions N to reach 90% correct prediction on that behaviour
+- Metric: N interactions to reach 90% correct prediction on that behaviour
 
 **Axis B — Memory Retentiveness (Catastrophic Forgetting Index)**
-When the model learns New Habit B, does it corrupt its accuracy on Old Habit A?
-- Example: after learning summer cooling habits over 4 weeks, shift to winter heating. Does security routine accuracy degrade?
+When the model learns New Habit B, does it corrupt accuracy on Old Habit A?
+- Example: after learning summer cooling habits, shift to winter heating. Does security routine accuracy degrade?
 - Metric: accuracy on Habit A after N updates for Habit B — the forgetting curve
 
 **Axis C — Inference Efficiency (Edge Hardware Index)**
 Task accuracy mapped against hardware latency and memory footprint.
 - Metric: Task Success Rate / (Time to Inference × RAM Footprint)
-- Measured on target hardware: Mac Mini, Raspberry Pi 5
+- Measured on: Mac Mini, Raspberry Pi 5
 
-**Sanity check baseline (not the research metric):**
-- Action accuracy — does it get the device action right at all? (mostly solved by the base model)
-- Context discrimination accuracy — same command, different context, different correct action?
+**Axis D — Graceful Degradation**
+When the model encounters a genuinely novel context (outside training distribution), does it:
+1. Fall back to the Generalised Norm hierarchy correctly?
+2. Ask for confirmation at the right confidence threshold?
+3. Learn from the interaction on next exposure (Axis A on first contact)?
+- Metric: % of chaos scenarios where fallback action matches Generalised Norm ground truth
 
 | Same command | Context A | Correct action A | Context B | Correct action B |
 |---|---|---|---|---|
 | "Make it comfortable" | 22:00, post-gym, home alone | 19°C, dim lights | 19:00, guests over | 21°C, bright lights |
+| "Make it comfortable" | [chaos] 3am, guests sleeping, storm | Generalised Norm: quiet + comfort floor | [learned] user alone at 3am | 17°C, lights off |
 
 ---
 
@@ -193,21 +342,27 @@ Task accuracy mapped against hardware latency and memory footprint.
 | Phase transition criterion (when to switch RAG → trained NN) | Novel — no formal definition in literature |
 | Personal RLHF with continual reward model update | Partially explored in recommender systems, not in home automation |
 | Context clash as active learning signal | Not formalised in this domain |
-| Three-axis evaluation framework (velocity + forgetting + efficiency) | Novel combination for home AI |
+| Four-axis evaluation framework (velocity + forgetting + efficiency + graceful degradation) | Novel combination for home AI |
+| Generalised Assistant Expectation Hierarchy as formalised prior for cold start | Not formalised for home AI — derivable from HRI literature but not applied here |
+| Chaos Context Injection as benchmark generation methodology | Not applied to home AI personalisation benchmark construction |
+| Graceful Degradation axis (Axis D) — fallback behaviour on out-of-distribution context | No benchmark currently measures this for home AI |
 
-**What's NOT novel:** RAG cold start, contextual bandits, data flywheel concept, DPO, static home automation benchmarks. These are infrastructure or prior work.
+**What's NOT novel:** RAG cold start, contextual bandits, data flywheel concept, DPO, static home automation benchmarks, domain randomisation in robotics, chaos engineering for system reliability. These are infrastructure or prior work.
 
-**Key differentiator from PersonalHomeBench:** They freeze model weights and test reasoning. We update weights and test adaptation. Different problem, different evaluation, complementary contributions.
+**Key differentiator from PersonalHomeBench:** They freeze model weights and test reasoning. We update weights and test adaptation. They have no fallback for novel contexts. We formalise the fallback prior and test it with Axis D.
 
 ---
 
 ## Open Research Questions
 
 1. **Phase transition threshold** — how many labeled tuples are needed before Phase 3 training outperforms Phase 1 RAG? Is there a principled criterion?
-2. **Context schema completeness** — schema is fixed at deployment. What happens when an important context dimension is missing? Can the system signal this?
+2. **Context schema completeness** — schema is fixed at deployment. Can chaos injection surface missing variables by finding perturbations that consistently produce high uncertainty or low crowdsourcing consensus?
 3. **Consolidation** — how to merge/expire context store entries without losing important preferences?
 4. **Personal reward model stability** — can DPO updates stay stable with only hundreds of preference pairs?
 5. **Cold start UX** — Phase 1 accuracy is mediocre. How do you keep users engaged before the Phase 3 breakthrough?
+6. **Generalised Norm threshold θ** — what is the right confidence threshold below which the model falls back to the hierarchy? Does it vary per action category (safety actions need higher θ than comfort actions)?
+7. **Crowdsourcing label quality** — for low-consensus scenarios (<60% agreement), the correct answer is "ask the user." How do we validate this without ground truth? Is confirmation rate on defer-actions the right proxy metric?
+8. **Chaos perturbation coverage** — how many chaos-generated examples are needed before the model is robust to the long tail? Is there a diminishing returns curve, and can it be estimated before running the full experiment?
 
 ---
 
@@ -218,3 +373,4 @@ Task accuracy mapped against hardware latency and memory footprint.
 - [ ] Can this week's project generate labeled (context, command, action) tuples?
 - [ ] Is the context schema still complete, or did we discover a missing variable?
 - [ ] Any open research question above that became clearer this week?
+- [ ] Did we encounter a chaos-level scenario this week? How did the system handle it?
