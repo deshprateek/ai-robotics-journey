@@ -13,13 +13,12 @@
 | Month | Focus | Milestone |
 |---|---|---|
 | 1 | PyTorch, CNNs, backprop | Comfortable implementing models |
-| 2 | Transformers, LoRA, RL basics | Built a GPT + RL agent |
-| 3 | Read the field, set up environment | Know the research landscape |
-| 4 | Deep niche reading, simulation setup | First home project running |
-| 5 | Reproduce a paper | Find failure modes |
-| 6-7 | Your research contribution | Experiments running + results solidified |
-| 8 | Write + submit paper | arXiv preprint live |
-| 9 | Job search | Interviews at Tier 1 companies |
+| 2 | Transformers, LoRA, HomePersona infrastructure | LoRA classifier + Home Assistant + ChromaDB live |
+| 3 | First working pipeline + Benchmark v0.2 + MemGPT | End-to-end pipeline running, Day 0 baseline logged |
+| 4 | Experiments Phase A + B | Baselines established, personalisation curve measured |
+| 5 | Experiments Phase C + D | Catastrophic forgetting measured, ablation complete |
+| 6 | Write + submit paper | arXiv preprint live |
+| 7 | Job search | Interviews at Tier 1 companies |
 
 ---
 
@@ -45,15 +44,13 @@ Every project from Week 5 onward directly contributes a component of HomePersona
 ```
 Week 1-4:   Learn the tools — backprop, PyTorch, CNNs, training dynamics
 Week 5-6:   Build the seed — Benchmark v0.1 + LoRA command classifier      ← HomePersona starts here
-Week 7-8:   Build the RL layer — thermostat preference agent (uses benchmark)
-Week 9-10:  Read the papers behind what you're building
-Week 11-12: Set up the infrastructure — Home Assistant + ChromaDB memory store
-Week 13-14: Design the full system + extend Benchmark v0.1 → v0.2
-Week 15-16: Build the baseline pipeline end-to-end
-Month 5:    Add MemGPT memory layer + LoRA adapter on top
-Month 6-7:  Run all experiments, measure improvement over time
-Month 8:    Write the paper
-Month 9:    Job search
+Week 7-8:   Build the infrastructure — Home Assistant + ChromaDB + CartPole
+Week 9-10:  Connect the pieces — first end-to-end pipeline, Day 0 baseline
+Week 11-12: Benchmark v0.2 + MemGPT integration + LoRA adapter layer
+Week 13-16: Experiments Phase A + B — baselines + personalisation over time
+Month 5:    Experiments Phase C + D — catastrophic forgetting + ablation
+Month 6:    Write the paper
+Month 7:    Job search
 ```
 
 ---
@@ -145,36 +142,40 @@ Month 9:    Job search
   - Write first blog post when this project is complete — byline: Prateek Deshmukh and Samir Jibhakate: "We fine-tuned a 3B model on home automation commands and matched GPT-4 at 100x lower cost — and built the first benchmark to prove it." Post to Towards Data Science or your own blog
   - Email 1 researcher in the personalisation / small models space — share the blog post and the benchmark. This establishes your niche publicly from Month 2
 
-### Week 7-8: RL Basics
-- [ ] Read: Sutton & Barto "Reinforcement Learning" Ch 1-3 (free PDF)
-- [ ] Complete: Hugging Face Deep RL Course Unit 1-3 (huggingface.co/learn, free)
-- [ ] Read: "Spinning Up in Deep RL" — OpenAI (conceptual overview)
+### Week 7-8: HomePersona Infrastructure + CartPole
+- [ ] Read: "MemGPT: Towards LLMs as Operating Systems" — Packer et al. 2023 (read now, you are building the memory store this week)
+- [ ] Read: Sutton & Barto "Reinforcement Learning" Ch 1-2 (conceptual foundation only)
 
-- [ ] **Project 1: Solve CartPole with Q-learning**
-  - What: CartPole is a simulation where a pole is balanced on a moving cart. Your agent controls the cart (move left or right) and must keep the pole from falling over
-  - Why: this is the "hello world" of RL. Every robotics researcher has done this. It teaches the core RL loop — observe state, pick action, get reward, update policy
-  - Implement from scratch: no Stable-Baselines3 here — write the Q-table or DQN yourself so you understand what's happening
+- [ ] **Project 1: CartPole with Q-learning** *(3 days)*
+  - What: a pole balanced on a moving cart — the "hello world" of RL. Write a Q-table or DQN from scratch, no Stable-Baselines3
+  - Why: every robotics researcher has done this. Teaches the core RL loop — observe state, pick action, get reward, update policy — which is exactly what DPO replaces in the HomePersona preference layer
   - Goal: agent keeps the pole balanced for 200+ timesteps consistently
-  - Log in W&B: reward per episode, steps balanced over time — your first W&B experiment, get the logging habit right here
-  - Success: you can explain what a reward function is and why choosing it carefully matters
+  - Log in W&B: reward per episode, steps balanced over time
+  - Success: you can explain what a reward function is and why reward design is the hard part
 
-- [ ] **Project 2: Home thermostat RL simulation**
-  - What: build a simple Python simulation of a home environment. State = (time of day, current temperature, occupancy: yes/no). Actions = heat, cool, off. Reward = +1 if temperature is in comfort range (20-22°C) and someone is home, -0.1 per timestep for running heating/cooling (energy cost)
-  - Why: this is your first HomePersona RL experiment — the reward function design is the same problem you will face with the preference layer. The RL loop here (state → action → reward → update) is exactly what DPO replaces in Month 6-7
-  - Connect to benchmark: use the climate commands from Benchmark v0.1 (thermostat category) as the action space. Your agent's learned policy is the ground truth you will compare HomePersona against in Month 6-7 experiments
-  - Goal: agent learns to pre-heat the house before occupants arrive and turn off when nobody's home
-  - Log in W&B: reward per episode, energy cost vs naive policy, temperature compliance rate over time
-  - Success: your agent uses less energy than a naive "always heat when cold" policy while maintaining comfort
+- [ ] **Project 2: Home Assistant + Benchmark Day 0 baseline**
+  - What: Home Assistant is an open-source smart home platform that runs locally and connects to real or virtual devices. Set it up locally and connect 3 virtual devices: a dimmable light, a thermostat, and a smart lock
+  - Task: run 50 commands from your Benchmark v0.1 (spread across lighting, climate, access categories) through the untuned Llama 3.2 3B. Record which commands it gets right — this is your Day 0 baseline before any personalisation
+  - How: `pip install homeassistant`, configure 3 virtual devices in `configuration.yaml`, write a Python script that sends model responses as Home Assistant API calls
+  - Goal: working pipeline where a text command reaches a device action, even if accuracy is low
+  - Log in W&B: Day 0 accuracy per category (lighting, climate, access) on Benchmark v0.1 — this number appears in your paper as the untuned baseline
+  - Success: you have a reproducible Day 0 number on Benchmark v0.1
+
+- [ ] **Project 3: ChromaDB memory store**
+  - What: ChromaDB is a local vector database — stores text as embeddings and retrieves the most semantically similar entries for any query. This is the memory layer of HomePersona (Phase 1 RAG cold start)
+  - Task: store 100 fake user interaction logs (e.g. "User asked to dim bedroom lights at 10pm, set to 30%"). Write a retrieve(query) function. Test on 20 queries with known correct retrievals and measure precision@3
+  - How: `pip install chromadb sentence-transformers`, embed with `all-MiniLM-L6-v2`, store and query
+  - Goal: retrieval precision above 80% on your 20 test queries
+  - Log in W&B: retrieval precision@3 and precision@5, embedding model used, average query latency
+  - Success: you understand why embedding choice matters — this store powers the RAG cold-start phase
 
 ---
 
-## Month 3 — Research Landscape
+## Month 3 — First Working Pipeline
 
 **Habits this month:**
-- [ ] Read 2 papers/week — use arxiv-sanity and Papers with Code to find them
+- [ ] Read 2 papers/week — in context of what you're building, not as a separate activity
 - [ ] Every Sunday: check new arXiv papers in personalisation, continual learning, on-device ML
-
-### Week 9-10: Read the Field (Build-First)
 
 **How to read papers fast:**
 1. Title + abstract
@@ -187,19 +188,26 @@ Month 9:    Job search
 - [ ] Set up Connected Papers (connectedpapers.com) — paste any paper, see citation graph
 - [ ] Set up paper reading system — Obsidian or Notion, 3-line summary per paper
 
-**Papers — Core (build challenge first, then read):**
+### Week 9-10: Connect the Pieces — Full Baseline Pipeline
 
-- [ ] **LoRA** — Hu et al. 2022
-  - Build first: "A weight matrix W stays frozen. Instead you train two small matrices A (d×r) and B (r×k) where r is much smaller than d. The adapted output is Wx + ABx. Implement this as a PyTorch module wrapping a single Linear layer."
-  - Then read the paper — check your implementation against theirs, note what they added that you didn't think of
+- [ ] **Project: First end-to-end pipeline**
+  - What: connect all three components built in Week 5-8: ChromaDB memory store + local LLM (Llama 3.2 3B via Ollama or MLX) + Home Assistant API
+  - Build the full query pipeline: user command → retrieve memories from ChromaDB → inject into LLM context → model responds → execute Home Assistant action
+  - Run all 50 Benchmark v0.1 commands through this pipeline — compare against Week 7-8 Day 0 baseline. Did adding memory retrieval improve things?
+  - Goal: working end-to-end pipeline with measurable improvement over Day 0 baseline
+  - Log in W&B: accuracy vs Day 0 baseline, response latency, retrieval precision — this is Experiment 3 from Month 4 Phase A
+  - Success: one number goes up vs Day 0 — even small improvement proves the pipeline works
 
-- [ ] **MemGPT** — Packer et al. 2023
-  - Build first: "An LLM has a fixed context window like RAM. It also has an external memory store like a hard drive. It can call retrieve(query) and store(text) functions mid-conversation. Build a minimal version: a list of strings as the store, a cosine-similarity retrieve function, and a prompt wrapper that injects retrieved memories."
-  - Then read the paper — this is the paper you will reproduce in Month 5
+- [ ] **Project: Retrieval tuning**
+  - What: scale ChromaDB from 100 to 500 fake logs and tune retrieval — experiment with embedding models, top-k values, and similarity thresholds
+  - Why: at 500 logs, retrieval noise becomes a real problem. Wrong memories injected into context actively confuse the model
+  - Goal: retrieval precision above 85% on your 20 test queries (up from 80% in Week 7-8)
+  - Log in W&B: precision@3 and precision@5 per embedding model — which embedding model wins?
+  - Success: you can quantify exactly how much retrieval quality affects downstream task success rate
 
-- [ ] **Federated Learning** — McMahan et al. 2017
-  - Build first: "3 clients each train a small model on their own slice of your wine dataset. They never share data — only gradients. A central server averages the gradients and sends updates back. Implement this simulation in plain PyTorch."
-  - Then read the paper — directly relevant to privacy-first home AI
+**Background reading this week (read alongside building):**
+- [ ] **Federated Learning** — McMahan et al. 2017: 3 clients train on their own data, only share gradients. Read to understand the privacy angle you will reference in your related work section
+- [ ] **PersonalHomeBench** — arXiv 2604.16813: read the paper that is your closest prior work. Understand exactly what they measure and what they don't — your differentiation must be crisp
 
 - [ ] **Continual Learning Survey** — De Lange et al. 2022
   - No build challenge — it's a survey. Read it with one question: "what are the 3 main approaches to preventing catastrophic forgetting, and which one is most applicable to a LoRA adapter that updates from user interactions?"
@@ -213,32 +221,38 @@ Month 9:    Job search
 
 **Papers — Context (read only, understand the landscape):**
 
-- [ ] SayCan — Google 2022. LLMs tell robots what to do. Important background for grounding language to actions
-- [ ] CLIP — OpenAI 2021. Vision-language pretraining. You will use CLIP as a perception backbone
+- [ ] SayCan — Google 2022. LLMs tell robots what to do. Background for grounding language to actions
 - [ ] Inner Monologue — Google 2022. LLMs reason about robot actions in real time
-- [ ] ALFRED benchmark — MIT 2020. Standard home task benchmark — you need to know what everyone else evaluates on
-- [ ] PersonalHomeBench — arXiv 2604.16813, April 2026. Closest prior work to HomePersona benchmark. 1,100 households, 9,168 tasks, 40+ appliances. Tests static reasoning about a described user — NOT weight adaptation. Read to understand exactly how your benchmark differs
-- [ ] ACT (Action Chunking with Transformers) — Zhao et al. 2023. Imitation learning architecture for physical robots. Expected knowledge at Figure AI, Physical Intelligence, and Agility Robotics interviews
+- [ ] ALFRED benchmark — MIT 2020. Standard home task benchmark — know what everyone else evaluates on
+- [ ] ACT (Action Chunking with Transformers) — Zhao et al. 2023. Imitation learning for physical robots. Expected knowledge at Figure AI and Physical Intelligence interviews
+- [ ] RT-2 — Brohan et al. 2023. Foundation models for robot control. Understand the model class ML teams at robotics companies work on
 
-### Week 11-12: HomePersona Infrastructure Setup
+### Week 11-12: Benchmark v0.2 + MemGPT Integration + LoRA Layer
 - [ ] Read: "How to Read a Paper" — Keshav (3 page PDF)
 - [ ] Read: "An Opinionated Guide to ML Research" — John Schulman blog post
 
-- [ ] **Project 1: Home Assistant + Benchmark baseline**
-  - What: Home Assistant is an open-source smart home platform that runs locally and connects to real or virtual devices. Set it up locally and connect 3 virtual devices: a dimmable light, a thermostat, and a smart lock
-  - Task: run 50 commands from your Benchmark v0.1 (spread across lighting, climate, access categories) through the untuned Llama 3.2 3B. Record which commands it gets right — this is your Day 0 baseline before any personalisation
-  - How: `pip install homeassistant`, configure 3 virtual devices in `configuration.yaml`, write a Python script that sends model responses as Home Assistant API calls
-  - Goal: working pipeline where a text command reaches a device action, even if accuracy is low
-  - Log in W&B: Day 0 accuracy per category (lighting, climate, access) on Benchmark v0.1 — this number appears in your paper as the untuned baseline
-  - Success: you have a reproducible Day 0 number on Benchmark v0.1 — everything in Month 6-7 will be compared against this
+- [ ] **Project 1: Extend Benchmark v0.1 → v0.2 with context + chaos methodology**
+  - What: add context columns to the ~900 commands — same command, different context, different correct action. This is the context discrimination layer
+  - Common context labels: simulated interaction logs (AI-assisted generation)
+  - Uncommon context labels: apply the Generalised Assistant Expectation Hierarchy as the labelling prior. For ambiguous cases, crowdsource 100+ responses — >80% consensus → majority label; <60% consensus → correct label is "ask the user"
+  - Goal: 50+ context-varying pairs versioned as v0.2 in `projects/homepersona/benchmark/`
+  - Success: you can report context discrimination accuracy as a separate metric from action accuracy
 
-- [ ] **Project 2: ChromaDB memory store**
-  - What: ChromaDB is a local vector database — it stores text as embeddings and retrieves the most semantically similar entries for any query. This is Layer 3 of HomePersona (the memory store)
-  - Task: store 100 fake user interaction logs (e.g. "User asked to dim bedroom lights at 10pm, set to 30%"). Write a retrieve(query) function. Test it on 20 queries with known correct retrievals and measure precision@3
-  - How: `pip install chromadb sentence-transformers`, embed with `all-MiniLM-L6-v2`, store and query
-  - Goal: retrieval precision above 80% on your 20 test queries
-  - Log in W&B: retrieval precision@3 and precision@5, embedding model used, average query latency
-  - Success: you understand why embedding choice matters — this memory store will power the RAG cold-start phase of HomePersona
+- [ ] **Project 2: MemGPT integration** *(use AI heavily to scaffold — understand by adapting, not by rebuilding from scratch)*
+  - What: adapt MemGPT's memory architecture to your home automation pipeline. Replace their generic LLM backend with your locally running Phi-4-mini or Llama 3.2 3B. The memory tells the model what happened; the adapter will tell it who you are
+  - Clone the Letta GitHub repo, read the core memory management files, understand what triggers a memory write vs a memory read
+  - Integrate with your existing ChromaDB store — MemGPT's memory manager on top of your retrieval layer
+  - Goal: working MemGPT-style memory layer running with your local model
+  - Common failure modes to watch: wrong memories cluttering context; latency from retrieval; conflicting old vs new preferences
+
+- [ ] **Project 3: Add LoRA adapter layer**
+  - What: fine-tune a LoRA adapter on top of your base model using the home automation commands from Benchmark v0.1
+  - Compare: no adapter vs LoRA adapter on Benchmark v0.1 — does fine-tuning help?
+  - Log in W&B: accuracy with and without LoRA, LoRA rank comparison (r=4 vs r=8 vs r=16), training loss curve
+  - Success: LoRA adapter improves accuracy over untuned base model on home commands
+
+- [ ] Write first blog post — byline: Prateek Deshmukh and Samir Jibhakate: "We fine-tuned a 3B model on home automation commands and matched GPT-4 at 100x lower cost — and built the first benchmark to prove it." Post to Towards Data Science or your own blog
+- [ ] Email 1 researcher in the personalisation / small models space — 3 sentences: what you built, why it matters, share the blog post link
 
 ---
 
@@ -302,150 +316,71 @@ Measure: task success rate, response latency, user preference score, confirmatio
 **The paper's secondary experiment — catastrophic forgetting:**
 After 4 weeks of learning your preferences, introduce new conflicting preferences. Does the model forget old ones? How do you mitigate this? This is where your contribution to the continual learning literature comes from.
 
-### Week 13-14: Deep Read + System Design
-- [ ] Read MemGPT paper 3 times — this is your closest prior work
-- [ ] Read the Letta GitHub codebase — every file before running anything
-- [ ] Draw a full system diagram of HomePersona — base model, adapter, memory, Home Assistant API
-- [ ] Write down: what are the 3 things your system does that MemGPT does not?
-- [ ] Set up Home Assistant locally — connect at least 3 virtual devices (light, thermostat, lock)
-- [ ] **Extend Benchmark v0.1 → v0.2 with context + chaos methodology**
-  - What: take the ~900 commands from Week 5-6 and add context columns — same command, different context, different correct action. This is the context discrimination layer the LoRA classifier didn't need but HomePersona does
-  - Why: the benchmark's primary metric is not action accuracy (mostly solved) but context discrimination accuracy — does the model pick the right action when the same command appears in different contexts?
-  - Example: "make it comfortable" + {22:00, post-gym, home alone} → 19°C dim lights vs {19:00, guests over} → 21°C bright lights
-  - Common context labels: simulated interaction logs
-  - Uncommon context labels: apply the Generalised Assistant Expectation Hierarchy (safety > social context > reversibility > comfort floor > energy default > personal preference) as the labelling prior. For ambiguous cases, crowdsource 100+ responses — if consensus >80% use the majority label; if <60% the correct label is "ask the user"
-  - This hierarchy + crowdsourcing methodology is also how Benchmark v0.3 (chaos robustness) will be labelled in Month 6-7
-  - Goal: 50+ context-varying examples covering all 4 tiers, versioned as v0.2 in `projects/homepersona/benchmark/`
-  - Success: you can run any HomePersona experiment and report both action accuracy and context discrimination accuracy as separate metrics
+### Week 13-14: Phase A — Establish Baselines
 
-### Week 15-16: Connect the Pieces — Full Baseline Pipeline
-- [ ] Run Phi-4-mini or Llama 3.2 3B locally via Ollama or MLX — confirm it handles home automation commands
-- [ ] Connect all three components built so far: ChromaDB memory store (Week 11-12) + local LLM + Home Assistant API (Week 11-12)
-- [ ] Build the full query pipeline: user command → retrieve memories from ChromaDB → inject into LLM context → model responds → execute Home Assistant action
-- [ ] Run all 50 Benchmark v0.1 commands through this pipeline — compare against your Week 11-12 Day 0 baseline. Did adding memory retrieval improve things?
-- [ ] Log in W&B: accuracy vs Day 0 baseline, response latency, retrieval precision — this is Experiment 3 from Month 6-7 Phase A
-- [ ] Write second blog post — byline: Prateek Deshmukh and Samir Jibhakate: "HomePersona has a working pipeline — here is how the pieces connect." Post to Towards Data Science or your own blog
-- [ ] Email 1 researcher in the personal AI / home automation space — share the blog post. 3 sentences: what you built, why it matters, ask one specific question about their work
-
-- [ ] **Project: Retrieval tuning**
-  - What: your Week 11-12 ChromaDB had 100 fake logs. Scale to 500 logs and tune retrieval — experiment with embedding models, top-k values, and similarity thresholds
-  - Why: at 500 logs, retrieval noise becomes a real problem. Wrong memories injected into context are worse than no memories — they actively confuse the model
-  - Goal: retrieval precision above 85% on your 20 test queries (up from 80% in Week 11-12)
-  - Success: you can quantify exactly how much retrieval quality affects downstream task success rate on the benchmark
-
----
-
-## Month 5 — Reproduce MemGPT + Add Your First Layer
-
-**Habits this month:**
-- [ ] Read 2 papers/week
-
-**Why MemGPT / Letta:**
-MemGPT is the closest prior work to your research. It gives LLMs a memory architecture modelled on operating systems — a limited main context (like RAM) and an external memory store (like a hard drive) that it reads and writes to. Reproducing it means you deeply understand the memory architecture you are building on top of, and your extension (LoRA personalisation + home automation) is a natural next step the authors themselves have not explored.
-
-**The Letta team is small and responsive** — they reply to GitHub issues and are active on Discord. This matters because when you get stuck (and you will) you can get help directly from the people who built it.
-
-### Week 17-18: Reproduce MemGPT Core
-- [ ] Read the MemGPT paper until you can explain every design decision out loud
-- [ ] Clone the Letta GitHub repo, read every file before running a single line
-- [ ] Draw a diagram: how does main context work, how does memory retrieval work, what triggers a memory write vs a memory read
-- [ ] Write down in your own words: what is their exact claim, how do they measure success, what are their failure cases
-- [ ] Run their demo — get it working on your machine
-- [ ] List every assumption they make — these gaps are where your contribution lives
-
-### Week 19-20: Extend to Home Automation + Add LoRA Layer
-- [ ] Adapt MemGPT's memory architecture to your home automation pipeline from Month 3
-- [ ] Replace their generic LLM backend with your locally running Phi-4-mini or Llama 3.2 3B via Ollama/MLX
-- [ ] Add the LoRA adapter layer on top — the memory tells the model what happened, the adapter tells the model who you are
-- [ ] Run your 50-command test suite again — compare against your Month 3 baseline. Did adding LoRA improve things?
-- [ ] Log in W&B: accuracy vs Month 4 baseline, LoRA vs no-LoRA comparison, latency — every change gets its own W&B run with a note on what changed and why
-- [ ] Write third blog post — byline: Prateek Deshmukh and Samir Jibhakate: "What we learned from reproducing MemGPT and adapting it to home automation" — concrete, specific, share what surprised you
-- [ ] Email the Letta team — 3 sentences: reproduced your paper, adapted it to home automation, here is one specific thing I found different. This is your strongest opener — you built their work
-
-**Common failure modes to look for:**
-- [ ] Memory retrieval brings back irrelevant old memories — clutters the context
-- [ ] LoRA adapter starts forgetting early preferences as it learns new ones — catastrophic forgetting in action
-- [ ] Latency — does adding memory retrieval make responses too slow for real use?
-- [ ] Conflicting preferences — "user likes it warm" vs "user set temp to 18°C last night" — which wins?
-- [ ] Cold start — system is useless for the first week before it has learned anything
-
----
-
-## Month 6-7 — Your Research Contribution
-
-**Habits this month:**
-- [ ] Read 2 papers/week — focus on papers you will cite in your related work section
-
-### Weekly Experiment Structure
-```
-Monday:    Hypothesis — "I think X will improve Y because Z"
-Tue-Thu:   Run experiment, collect results in W&B
-Friday:    Analyse — did it work? why/why not?
-Saturday:  Implement next iteration
-Sunday:    Read papers that explain your results
-```
-
-### Study Material
-- [ ] Watch: "A Hacker's Guide to Language Models" — Jeremy Howard (YouTube)
-- [ ] Read: "Scaling Laws for Neural Language Models" — OpenAI (understand why small models can be powerful with the right data)
-- [ ] Read: Hugging Face `peft` documentation — all LoRA configuration options
-- [ ] Read: ChromaDB documentation — how to structure memory for fast retrieval
-- [ ] Read: "Elastic Weight Consolidation" paper — one of the main techniques for preventing catastrophic forgetting, you may want to apply this to your LoRA adapter
-- [ ] Read: "Direct Preference Optimization" (DPO) — Rafailov et al. 2023. Simpler alternative to RLHF for learning from yes/no user feedback. The mechanism behind your preference layer — no RL required
-- [ ] Read: RAGAS documentation — framework for evaluating RAG pipelines (relevance, faithfulness, context recall)
-
-### Experiment Checklist — Run in This Order
-
-**Phase A: Establish baselines (Week 21-22)**
-- [ ] Experiment 1: Generic GPT-4 on 50 home automation commands — record accuracy and latency. This is the ceiling you are comparing against
-- [ ] Experiment 2: Llama 3.2 3B with no personalisation on same 50 commands — record accuracy and latency. This is the cost of going local
-- [ ] Experiment 3: Llama 3.2 3B + memory only (no LoRA) — does memory alone close the gap with GPT-4?
-- [ ] Experiment 4: Llama 3.2 3B + LoRA only (no memory) — does the adapter alone help?
-- [ ] Experiment 5: Full system — memory + LoRA — does combining them beat either alone?
-- [ ] Log all 5 experiments in the same W&B project with tags (GPT4-baseline, local-no-personalisation, local-memory-only, local-LoRA-only, local-full-system) — the comparison chart is Figure 1 in your paper
-- [ ] After Phase A is complete: write fourth blog post — byline: Prateek Deshmukh and Samir Jibhakate: "Does personalisation actually work? HomePersona Phase A results" — share the W&B chart publicly
-- [ ] After Phase A is complete: email 2 researchers whose work is closest to yours — share the blog post and W&B report link. Researchers respond to concrete results, not ideas
+- [ ] Read: "A Hacker's Guide to Language Models" — Jeremy Howard (YouTube)
+- [ ] Read: "Direct Preference Optimization" (DPO) — Rafailov et al. 2023. The mechanism behind your preference layer — no RL required
 
 - [ ] **Project: Build an eval harness for HomePersona**
-  - What: before running experiments, build a proper evaluation framework so every experiment produces comparable, trustworthy numbers
-  - Components: (1) RAGAS for RAG pipeline evaluation — measures retrieval relevance, answer faithfulness, context recall; (2) LLM-as-judge — use GPT-4 to score whether HomePersona's responses are correct and personalised; (3) task success rate — binary pass/fail per command against a ground truth answer key
-  - Why: without evals, you can't tell if an improvement is real or noise. Every number in your paper comes from this harness
-  - How: build it before running any experiment — treat it as the foundation all 5 experiments sit on
+  - What: a proper evaluation framework so every experiment produces comparable, trustworthy numbers
+  - Components: (1) RAGAS for RAG pipeline evaluation — retrieval relevance, answer faithfulness, context recall; (2) LLM-as-judge — use GPT-4 to score whether HomePersona's responses are correct and personalised; (3) task success rate — binary pass/fail per command against a ground truth answer key
+  - Build this before running any experiment — it is the foundation all experiments sit on
   - Goal: given any HomePersona output, the harness produces 3 scores automatically: retrieval precision, response faithfulness, task success rate
-  - Success: you can rerun any experiment and get the same numbers — reproducibility is the bar
+  - Success: you can rerun any experiment and get the same numbers
 
-- [ ] **Project: Build Benchmark v0.3 — Chaos Robustness Test Set**
-  - What: generate a chaos test set by taking v0.2 context-command pairs and systematically perturbing 1–3 context features (unusual time, flipped guest/exercise flags, extreme temperature, rare activity combinations). Label each perturbed scenario using the Generalised Norm hierarchy + crowdsourcing
-  - Why: v0.1 and v0.2 test performance on scenarios the model has seen or can reason about from a description. v0.3 tests the gap neither covers — what does the model do when it encounters a genuinely novel context outside its training distribution? This is Axis D (Graceful Degradation) in your evaluation framework, and it's the gap PersonalHomeBench cannot measure
-  - Perturbation schema: define per-feature chaos distributions (e.g. time_of_day: [2am, 3am, 4am]; guests_present: flip; outside_temp_c: [-5°C, 38°C]) — see `projects/homepersona/DESIGN.md` for full schema
-  - Labelling: if Generalised Norm hierarchy resolves the scenario unambiguously → use that label. If ambiguous → crowdsource; if <60% consensus → correct label is "ask the user"
-  - Goal: 100+ chaos scenarios versioned as v0.3 in `projects/homepersona/benchmark/`, covering each context feature perturbation type
-  - Success: you can measure Axis D — what % of chaos scenarios does the model handle correctly via the generalised fallback before any personalisation?
+- [ ] **Experiment 1:** Generic GPT-4 on 50 home automation commands — record accuracy and latency. This is the ceiling you are comparing against
+- [ ] **Experiment 2:** Llama 3.2 3B with no personalisation on same 50 commands — record accuracy and latency. This is the cost of going local
+- [ ] **Experiment 3:** Llama 3.2 3B + memory only (no LoRA) — does memory alone close the gap with GPT-4?
+- [ ] **Experiment 4:** Llama 3.2 3B + LoRA only (no memory) — does the adapter alone help?
+- [ ] **Experiment 5:** Full system — memory + LoRA — does combining them beat either alone?
+- [ ] Log all 5 experiments in W&B with tags (GPT4-baseline, local-no-personalisation, local-memory-only, local-LoRA-only, local-full-system) — the comparison chart is Figure 1 in your paper
+- [ ] Write second blog post after Phase A — byline: Prateek Deshmukh and Samir Jibhakate: "Does personalisation actually work? HomePersona Phase A results" — share the W&B chart publicly
+- [ ] Email 2 researchers whose work is closest to yours — share the blog post and W&B report link. Researchers respond to concrete results, not ideas
 
-**Phase B: Personalisation over time (Week 23-24)**
-- [ ] Simulate 4 weeks of user interactions (generate synthetic interaction logs for a fictional user with consistent preferences)
+### Week 15-16: Phase B — Personalisation Over Time
+
+- [ ] Simulate 4 weeks of user interactions (generate synthetic interaction logs for a fictional user with consistent preferences — use AI to generate 500+ realistic log entries fast)
 - [ ] Run your full system on week 1 data, measure task success rate
 - [ ] Add week 2 data, update LoRA adapter and memory, measure again
-- [ ] Repeat for week 3 and 4
-- [ ] Log in W&B: task success rate per simulated week (weeks 1-4) — this plot is Figure 2 in your paper
+- [ ] Repeat for weeks 3 and 4
+- [ ] Log in W&B: task success rate per simulated week (weeks 1–4) — this plot is Figure 2 in your paper
 - [ ] Plot: does task success rate go up over time? This is your key result
 
-**Phase C: Catastrophic forgetting (Week 25-26 of Month 7)**
-- [ ] After 4 weeks of learning "User A" preferences, switch to "User B" preferences
+- [ ] **Project: Benchmark v0.3 — Chaos Robustness Test Set**
+  - What: generate chaos test inputs by perturbing 1–3 context features in the v0.2 base (unusual time, flipped guest/exercise flags, extreme temperature, rare activity combinations). Label via the Generalised Norm hierarchy + crowdsourcing
+  - Goal: 100+ chaos scenarios versioned as v0.3 in `projects/homepersona/benchmark/`
+  - Success: you can measure Axis D — what % of chaos scenarios does the model handle correctly via the generalised fallback?
+
+---
+
+## Month 5 — Deep Experiments
+
+**Habits this month:**
+- [ ] Read 2 papers/week — focus on papers you will cite in the related work section
+
+### Week 17-18: Phase C — Catastrophic Forgetting
+
+- [ ] Read: "Elastic Weight Consolidation" paper — one of the main techniques for preventing catastrophic forgetting. Read before running this experiment
+- [ ] Read: RAGAS documentation — framework for evaluating RAG pipelines
+
+- [ ] After 4 weeks of learning "User A" preferences from Phase B, switch to "User B" preferences
 - [ ] Measure: how quickly does the system forget User A? How quickly does it learn User B?
 - [ ] Try Elastic Weight Consolidation to slow forgetting — does it help?
 - [ ] Log in W&B: forgetting rate (User A accuracy after N User B interactions) — this is your second key result and continual learning contribution
+- [ ] Write third blog post — byline: Prateek Deshmukh and Samir Jibhakate: "What we learned about catastrophic forgetting in a personalised home AI" — share the forgetting curve publicly
+- [ ] Email the Letta team — 3 sentences: built on your memory architecture, adapted to home automation, found X about catastrophic forgetting. This is your strongest opener
 
-**Phase D: Ablation study + chaos robustness (Week 27-28 of Month 7)**
+### Week 19-20: Phase D — Ablation + Chaos Robustness
+
 - [ ] Remove memory layer — how much does performance drop?
 - [ ] Remove LoRA adapter — how much does performance drop?
-- [ ] Reduce LoRA rank (fewer adapter parameters) — where is the minimum that still works?
+- [ ] Reduce LoRA rank (r=4 vs r=8 vs r=16) — where is the minimum that still works?
 - [ ] Test on a new user with completely different preferences — does the system generalise?
-- [ ] Log in W&B: ablation table — all 4 conditions with and without each component
-- [ ] Run Benchmark v0.3 (chaos test set) against the full system — measure Axis D: what % of chaos scenarios does the model handle correctly via the generalised fallback? Does adding LoRA adaptation improve this over the cold start baseline?
-- [ ] Log in W&B: Axis D score (% correct on chaos scenarios), broken down by perturbation type — which context feature perturbations break the model most?
+- [ ] Log in W&B: ablation table — all conditions with and without each component
+- [ ] Run Benchmark v0.3 (chaos test set) against the full system — measure Axis D: what % of chaos scenarios does the model handle correctly via the generalised fallback?
+- [ ] Log in W&B: Axis D score broken down by perturbation type — which context feature perturbations break the model most?
 
-**Failure analysis (ongoing)**
+**Failure analysis (ongoing throughout Month 5)**
 - [ ] Collect 20 specific examples where your system fails — categorise them
 - [ ] Ambiguous commands: "make it nice" — system doesn't know what nice means to you yet
 - [ ] Conflicting memories: old preference vs new preference, which wins?
@@ -454,7 +389,7 @@ Sunday:    Read papers that explain your results
 
 ---
 
-## Month 8 — Write + Submit
+## Month 6 — Write + Submit
 
 **Habits this month:**
 - [ ] Read 2 papers/week
@@ -517,12 +452,12 @@ Conclusion:   what you showed, limitations (synthetic data, one home),
 - [ ] Matplotlib for graphs, Inkscape for diagrams
 
 ### Submission Checklist
-- [ ] Week 29-30: Write full paper draft
-- [ ] Week 31: Post preprint on arXiv — same day as submission, do not wait for acceptance
-- [ ] Week 31: Submit to workshop
-- [ ] Week 31: Update resume and GitHub README with arXiv link immediately
-- [ ] Week 31: Post on Twitter/X and LinkedIn — one thread explaining what you built and what you found
-- [ ] Week 31: Email every researcher you have contacted over the past months — share the paper link directly
+- [ ] Week 21-22: Write full paper draft
+- [ ] Week 23: Post preprint on arXiv — same day as submission, do not wait for acceptance
+- [ ] Week 23: Submit to workshop
+- [ ] Week 23: Update resume and GitHub README with arXiv link immediately
+- [ ] Week 23: Post on Twitter/X and LinkedIn — one thread explaining what you built and what you found
+- [ ] Week 23: Email every researcher you have contacted over the past months — share the paper link directly
 
 ### Workshop Targets
 | Conference | Workshop | Deadline | Why |
@@ -536,12 +471,12 @@ Conclusion:   what you showed, limitations (synthetic data, one home),
 
 ---
 
-## Month 9 — Job Search
+## Month 7 — Job Search
 
 **Habits this month:**
 - [ ] Apply to Tier 3 first (Letta, Josh.ai, Home Assistant) — build interview reps before Tier 1
 
-### Your Profile by Month 9
+### Your Profile by Month 7
 - [ ] GitHub: paper code, clean implementation, reproducible experiments
 - [ ] arXiv: preprint with your name on it
 - [ ] Resume: senior SWE + ML research + published work
