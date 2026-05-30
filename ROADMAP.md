@@ -231,12 +231,13 @@ Month 7:    Job search
 - [ ] Read: "How to Read a Paper" — Keshav (3 page PDF)
 - [ ] Read: "An Opinionated Guide to ML Research" — John Schulman blog post
 
-- [ ] **Project 1: Extend Benchmark v0.1 → v0.2 with context + chaos methodology**
-  - What: add context columns to the ~900 commands — same command, different context, different correct action. This is the context discrimination layer
-  - Common context labels: simulated interaction logs (AI-assisted generation)
-  - Uncommon context labels: apply the Generalised Assistant Expectation Hierarchy as the labelling prior. For ambiguous cases, crowdsource 100+ responses — >80% consensus → majority label; <60% consensus → correct label is "ask the user"
-  - Goal: 50+ context-varying pairs versioned as v0.2 in `projects/homepersona/benchmark/`
-  - Success: you can report context discrimination accuracy as a separate metric from action accuracy
+- [ ] **Project 1: Build Benchmark v0.2 — Layer 2 dynamic evaluation**
+  - What: v0.2 is two artifacts: (1) **chronological sequence files** and (2) **evaluation harness**. Together they turn the static v0.1 CSV into a temporal evaluation that measures the full learning arc
+  - **Chronological sequence files:** structured day-by-day interaction sequences that define the training steps and validation checkpoints. Each sequence covers one habit being learned: Day 1-N the correct output is `ask`, Day N+1 onward (after sufficient feedback) the correct output transitions to `act`. Sequences also include a chaos block (3 days of anomalous context) and a bounce-back period. The sequences also add context columns — same utterance, different context, different correct action
+  - **Evaluation harness:** runs the validation protocol after every adaptation epoch — (1) full Tier 1 anchor set for catastrophic forgetting check; (2) current habit scenario for alignment progress; (3) all prior habit scenarios for cross-habit forgetting; (4) bounce-back check after chaos block resolves. See `projects/homepersona/benchmark/schema.md` for the full validation protocol
+  - Uncommon context labels: apply the Generalised Assistant Expectation Hierarchy as the labelling prior. For ambiguous cases, crowdsource 100+ responses — >80% consensus → majority label; <60% consensus → correct label is `ask`
+  - Goal: sequence files + working harness versioned as v0.2 in `projects/homepersona/benchmark/`
+  - Success: given a model checkpoint and a sequence file, the harness produces Alignment Velocity, cross-habit forgetting rate, and bounce-back pass/fail automatically
 
 - [ ] **Project 2: MemGPT integration** *(use AI heavily to scaffold — understand by adapting, not by rebuilding from scratch)*
   - What: adapt MemGPT's memory architecture to your home automation pipeline. Replace their generic LLM backend with your locally running Phi-4-mini or Llama 3.2 3B. The memory tells the model what happened; the adapter will tell it who you are
@@ -322,11 +323,11 @@ After 4 weeks of learning your preferences, introduce new conflicting preference
 - [ ] Read: "Direct Preference Optimization" (DPO) — Rafailov et al. 2023. The mechanism behind your preference layer — no RL required
 
 - [ ] **Project: Build an eval harness for HomePersona**
-  - What: a proper evaluation framework so every experiment produces comparable, trustworthy numbers
-  - Components: (1) RAGAS for RAG pipeline evaluation — retrieval relevance, answer faithfulness, context recall; (2) LLM-as-judge — use GPT-4 to score whether HomePersona's responses are correct and personalised; (3) task success rate — binary pass/fail per command against a ground truth answer key
-  - Build this before running any experiment — it is the foundation all experiments sit on
-  - Goal: given any HomePersona output, the harness produces 3 scores automatically: retrieval precision, response faithfulness, task success rate
-  - Success: you can rerun any experiment and get the same numbers
+  - What: a proper evaluation framework so every experiment produces comparable, trustworthy numbers. This is the Layer 2 harness from Benchmark v0.2 — do not run any experiment before this is working
+  - Components: (1) RAGAS for RAG pipeline evaluation — retrieval relevance, answer faithfulness, context recall; (2) LLM-as-judge — use GPT-4 to score whether HomePersona's responses are correct and personalised; (3) task success rate — binary pass/fail per command against the Benchmark v0.1 ground truth; (4) **validation protocol** — after every adaptation epoch: run full Tier 1 anchor set (catastrophic forgetting check), run current habit scenario (alignment progress), run all prior habit scenarios (cross-habit forgetting), run bounce-back check after chaos block resolves
+  - The harness runs the validation protocol automatically at every epoch checkpoint — not just at the end of training. A model that reaches high accuracy but catastrophically forgets between adaptation steps is a failed model; this catches it
+  - Goal: given a model checkpoint, the harness produces 4 scores automatically: retrieval precision, response faithfulness, task success rate, and per-epoch Tier 1 anchor accuracy (the forgetting signal)
+  - Success: you can rerun any experiment and get the same numbers; Tier 1 accuracy is logged at every epoch
 
 - [ ] **Experiment 1:** Generic GPT-4 on 50 home automation commands — record accuracy and latency. This is the ceiling you are comparing against
 - [ ] **Experiment 2:** Llama 3.2 3B with no personalisation on same 50 commands — record accuracy and latency. This is the cost of going local
@@ -574,7 +575,7 @@ One sentence answer for interviews: "At small scale I use plot_top_losses and ma
 - [ ] Every Sunday: check new arXiv papers in your area
 
 ### Hardware (Optional, Month 4+)
-- [ ] Koch v1.1 — $300 DIY robot arm, used in LeRobot tutorials
+- [ ] Koch v1.1 — $300 DIY robot arm, used in LeRobot tutorials. Full plan in `projects/koch-arm/PLAN.md` — 4 phases from basic control → imitation learning → ego-scale human video transfer → LoRA personalisation. Work on this when you need a break from HomePersona, no deadline.
 - [ ] Raspberry Pi 5 + Home Assistant — run real home automation locally
 
 ---

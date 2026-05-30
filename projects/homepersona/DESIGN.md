@@ -4,6 +4,32 @@
 
 ---
 
+## What We Are Building and Why (2-minute summary)
+
+**The problem.** Home AI (Alexa, Google Home) is generic — it treats every user the same and never learns your preferences. When you say "dim the lights," it doesn't know if you mean 30% because it's movie night, or 70% because you're reading. It acts when it should ask, and asks when it should just act. We call this the **initiative calibration problem**.
+
+**What the data shows.** We ran 7 models — from Mistral 7B to GPT-4o — against 840 home automation commands across 4 tiers of ambiguity. Key finding: no model gets initiative calibration right out of the box. Small models (≤8B) act on everything, including commands they should ask about first — 100% false act rate. Large models (70B, GPT-4o) overcorrect and ask too much. T2 accuracy (ambiguous commands) is stuck at ~50% across all models including GPT-4o. **Scale alone cannot solve this.**
+
+**The research question.** Can personal LoRA fine-tuning — training a small adapter on a specific user's preferences — solve what scale cannot? And when preferences change over time, does the model adapt without forgetting what it already learned?
+
+**The experiment (three datasets, one paper).**
+
+1. **Benchmark (840 rows, built)** — generic commands, 7 categories, 4 tiers. Used as a general capability probe at every stage. Establishes the baseline failure modes above.
+
+2. **Phase 1 personal dataset (~150 rows, v0.2)** — commands and expected responses for a synthetic user profile with specific habits. Fine-tune with LoRA, evaluate after every epoch. Measures **alignment velocity** (how many epochs to calibrate correctly) and **general capability forgetting** (does fine-tuning on personal data break the model on general commands).
+
+3. **Phase 2 personal dataset (~150 rows, v0.2)** — same user, shifted preferences (e.g. kid moved out, new device, changed routine). Fine-tune on Phase 2, continuing from Phase 1 weights. Measures **forward transfer** (did Phase 1 help Phase 2 learn faster?), **Phase 1 forgetting** (do old preferences get overwritten?), and general capability forgetting again.
+
+**What we are trying to answer.**
+- Does personal LoRA reduce false act rate on ambiguous commands below the GPT-4o ceiling?
+- How many training examples does it take (alignment velocity)?
+- Does fine-tuning cause catastrophic forgetting of general home automation capability?
+- When preferences shift (Phase 2), does the model adapt faster because of Phase 1, or does prior learning interfere?
+
+**Why it matters.** If LoRA works: small local models can match or exceed GPT-4o on personal commands, running entirely on home hardware with no cloud. If LoRA partially works: we identify exactly where it fails and why, pointing toward the next approach. Either outcome is a publishable continual learning result.
+
+---
+
 ## Prior Work and Positioning
 
 **PersonalHomeBench** (arXiv 2604.16813, April 2026) — the closest existing benchmark. 1,100 households, 9,168 task instances, 40+ smart appliances. Evaluates whether a model can reason about a personalised household context *given in the prompt*. Key gap: static evaluation — no weight updates, no adaptation over time, no catastrophic forgetting measurement, no LoRA or parameter-efficient adaptation. No fallback mechanism for genuinely novel contexts the prompt doesn't describe.
@@ -363,6 +389,28 @@ When the model encounters a genuinely novel context (outside training distributi
 6. **Generalised Norm threshold θ** — what is the right confidence threshold below which the model falls back to the hierarchy? Does it vary per action category (safety actions need higher θ than comfort actions)?
 7. **Crowdsourcing label quality** — for low-consensus scenarios (<60% agreement), the correct answer is "ask the user." How do we validate this without ground truth? Is confirmation rate on defer-actions the right proxy metric?
 8. **Chaos perturbation coverage** — how many chaos-generated examples are needed before the model is robust to the long tail? Is there a diminishing returns curve, and can it be estimated before running the full experiment?
+9. **Inner vs outer belief separation** — inspired by Stephanie Chan's continual learning framing. A well-designed system should distinguish strongly-held core preferences (slow to update, built from many consistent confirmations) from peripheral beliefs (fast to update, recent, low confidence). Current LoRA adaptation treats all parameters equally — a strongly confirmed preference can be overwritten at the same rate as a weak one. Open question: can confidence-weighted update rates (update peripheral beliefs fast, inner beliefs slowly) reduce catastrophic forgetting without EWC's computational overhead? The auxiliary hypothesis mechanism — where an anomalous experience is explained away rather than learned from, leaving the core belief intact — maps directly onto the chaos block in v0.3. When the chaos block fires, does the system treat the override as an anomaly (auxiliary hypothesis, inner belief survives) or as new preference data (peripheral update, inner belief corrupts)?
+
+---
+
+## Continual Learning Methods to Test (Running List)
+
+Candidate methods for Phase 1→2 experiments. Add here when a paper or blog is relevant. Don't redesign the experiment — these are additional conditions to run or mitigations to compare.
+
+| Method | What it does | Relevance to HomePersona | Source |
+|---|---|---|---|
+| **Self-distillation** | Before fine-tuning on new data, save the model's own outputs on old data as soft targets. During new training, add a loss term keeping new outputs close to saved targets. No separate teacher model, no stored data replay. | Direct mitigation for Phase 1 forgetting during Phase 2 training. Test: Phase 2 fine-tuning with vs without self-distillation — does forgetting rate drop? | Paper: "Self-Distillation Enabled Continual Learning" |
+| **Elastic Weight Consolidation (EWC)** | Adds a penalty term that slows updates to weights that were important for previous tasks. Importance estimated via Fisher information matrix. | Already in roadmap (Month 5). Compare against self-distillation — which prevents Phase 1 forgetting more with less compute overhead? | Kirkpatrick et al. 2017 |
+| **Confidence-weighted update rates** | Update peripheral/uncertain beliefs fast, core/strongly-confirmed beliefs slowly. Maps onto the inner vs outer belief separation in Open Question 9. | Experimental — no standard implementation. Could be a novel contribution if it works. | Open Question 9 in this doc |
+
+**Reading pipeline — how to add here:**
+When a paper or blog touches continual learning, LoRA adaptation, or catastrophic forgetting: if it suggests a concrete method testable in Phase 2, add a row. If it only changes understanding, note it in the related work section of the paper draft instead. Don't add methods that would require redesigning the experiment from scratch.
+
+**Current reading queue:**
+- [ ] "What are the real problems of continual learning?" — Andrew Lampinen (Infinite Faculty Substack, May 2026). Core argument: catastrophic forgetting is mostly solved at scale; real problems are positive transfer and cumulative learning. Read for paper motivation section — directly supports why Phase 1→Phase 2 forward transfer is the interesting question.
+- [ ] Self-distillation papers (2025) — cited in Lampinen blog. Read before building Phase 2 experiment. On critical path.
+- [ ] "Loss of Plasticity in Deep Continual Learning" — Nature 2024. Cited in Lampinen. Read to understand whether LoRA can adapt a heavily pretrained model or whether plasticity is already gone.
+- [ ] Context distillation papers (2022-2025) — cited in Lampinen. Converting in-context learning into weight updates. Read to understand how our LoRA fine-tuning relates to in-context adaptation — relevant to the paper's method section.
 
 ---
 

@@ -12,6 +12,7 @@ venv/
 
 # Data (keep structure, not large files)
 *.csv
+!projects/homepersona/benchmark/v0.1_*.csv
 *.bag
 *.pkl
 *.h5
@@ -27,3 +28,4 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+runs/
