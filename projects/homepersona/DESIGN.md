@@ -16,15 +16,17 @@
 
 1. **Benchmark (840 rows, built)** — generic commands, 7 categories, 4 tiers. Used as a general capability probe at every stage. Establishes the baseline failure modes above.
 
-2. **Phase 1 personal dataset (~150 rows, v0.2)** — commands and expected responses for a synthetic user profile with specific habits. Fine-tune with LoRA, evaluate after every epoch. Measures **alignment velocity** (how many epochs to calibrate correctly) and **general capability forgetting** (does fine-tuning on personal data break the model on general commands).
+2. **Phase 1 personal dataset (50→1000 rows, v0.2)** — commands and expected responses for a synthetic user profile with specific habits. Fine-tune with LoRA at multiple dataset sizes (50, 100, 150, 300, 500, 1000 rows), evaluate after every epoch at each size. The curve across dataset sizes is the finding — we identify the minimum sample count where adaptation stabilises without overfitting. Measures **alignment velocity** (epochs to calibrate correctly per dataset size) and **general capability forgetting** (does fine-tuning on personal data break the model on general commands).
 
-3. **Phase 2 personal dataset (~150 rows, v0.2)** — same user, shifted preferences (e.g. kid moved out, new device, changed routine). Fine-tune on Phase 2, continuing from Phase 1 weights. Measures **forward transfer** (did Phase 1 help Phase 2 learn faster?), **Phase 1 forgetting** (do old preferences get overwritten?), and general capability forgetting again.
+3. **Phase 2 personal dataset (matching size range, v0.2)** — same user, shifted preferences (e.g. kid moved out, new device, changed routine). Fine-tune on Phase 2, continuing from Phase 1 weights. Measures **forward transfer** (did Phase 1 help Phase 2 learn faster?), **Phase 1 forgetting** (do old preferences get overwritten?), and general capability forgetting again.
 
 **What we are trying to answer.**
 - Does personal LoRA reduce false act rate on ambiguous commands below the GPT-4o ceiling?
-- How many training examples does it take (alignment velocity)?
+- What is the minimum number of personal examples needed for stable alignment — and where does the tipping point sit on the 50→1000 curve?
 - Does fine-tuning cause catastrophic forgetting of general home automation capability?
 - When preferences shift (Phase 2), does the model adapt faster because of Phase 1, or does prior learning interfere?
+
+**On action language scope.** We evaluate against a standardised DSL abstraction (`light.set(room=bedroom brightness=30%)`) to isolate preference learning from implementation-specific entity resolution, which varies across home automation platforms and is orthogonal to our research question. Any platform with a consistent action language can substitute its own DSL and run the same harness.
 
 **Why it matters.** If LoRA works: small local models can match or exceed GPT-4o on personal commands, running entirely on home hardware with no cloud. If LoRA partially works: we identify exactly where it fails and why, pointing toward the next approach. Either outcome is a publishable continual learning result.
 
